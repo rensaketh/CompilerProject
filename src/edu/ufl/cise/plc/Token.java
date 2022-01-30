@@ -35,4 +35,16 @@ public class Token implements IToken{
     public String getStringValue() {
         return null;
     }
+
+    public Token(Kind kind, String input, int position, int length) {
+        this.kind = kind;
+        this.input = input;
+        this.pos = position;
+        this.length = length;
+    }
+
+    private Kind kind;
+    private String input;
+    private int pos;
+    private int length;
 }
