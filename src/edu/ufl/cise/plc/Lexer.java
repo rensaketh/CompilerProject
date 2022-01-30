@@ -1,5 +1,10 @@
 package edu.ufl.cise.plc;
 
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
+
 public class Lexer implements ILexer {
     @Override
     public IToken next() throws LexicalException {
