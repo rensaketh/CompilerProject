@@ -3,12 +3,12 @@ package edu.ufl.cise.plc;
 public class Token implements IToken{
     @Override
     public Kind getKind() {
-        return null;
+        return kind;
     }
 
     @Override
     public String getText() {
-        return null;
+        return input;
     }
 
     @Override

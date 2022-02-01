@@ -10,7 +10,11 @@ public class Lexer implements ILexer {
     public IToken next() throws LexicalException {
         State state = State.START;
         int startPos = currPosition;
-        while(true) { //loop through string
+        if(currPosition >= input.length()) {
+            IToken token = new Token(IToken.Kind.EOF, "", input.length(), 0);
+            return token;
+        }
+        while(currPosition < input.length()) { //loop through string
             switch(state) {
                 case START -> {
                     startPos = currPosition;
@@ -42,11 +46,6 @@ public class Lexer implements ILexer {
                         }
                         case '+' -> {
                             IToken token = new Token(IToken.Kind.PLUS, input.substring(startPos, currPosition + 1), currPosition, currPosition - startPos + 1);
-                            currPosition++;
-                            return token;
-                        }
-                        case '-' -> {
-                            IToken token = new Token(IToken.Kind.MINUS, input.substring(startPos, currPosition + 1), currPosition, currPosition - startPos + 1);
                             currPosition++;
                             return token;
                         }
@@ -92,9 +91,7 @@ public class Lexer implements ILexer {
                         }
 
 
-
-
-
+                        //More than one state
 
 
                         case '0' -> {
@@ -118,7 +115,26 @@ public class Lexer implements ILexer {
                             state = State.IN_STRING;
                             currPosition++;
                         }
-
+                        case '-' -> {
+                            state = State.HAVE_MINUS;
+                            currPosition++;
+                        }
+                        case '!' -> {
+                            state = State.HAVE_EX;
+                            currPosition++;
+                        }
+                        case '=' -> {
+                            state = State.HAVE_EQ;
+                            currPosition++;
+                        }
+                        case '<' -> {
+                            state = State.HAVE_LT; //less than
+                            currPosition++;
+                        }
+                        case '>' -> { //greater than
+                            state = State.HAVE_GT;
+                            currPosition++;
+                        }
                     }
                 }
                 case HAVE_ZERO -> {
@@ -154,9 +170,17 @@ public class Lexer implements ILexer {
                 case IN_IDENT -> {
                     char ch = input.charAt(currPosition);
                     if(typeSet.contains(input.substring(startPos, currPosition + 1))) {
-                        IToken token = new Token(IToken.Kind.TYPE, input.substring(startPos, currPosition), currPosition, currPosition - startPos + 1);
-                        state = State.START;
-                        return token;
+                        String tmp = input.substring(startPos, currPosition + 1);
+                        if (tmp.equals("void")){
+                            IToken token = new Token(IToken.Kind.KW_VOID, input.substring(startPos, currPosition), currPosition, currPosition - startPos + 1);
+                            state = State.START;
+                            return token;
+                        }
+                        else {
+                            IToken token = new Token(IToken.Kind.TYPE, input.substring(startPos, currPosition), currPosition, currPosition - startPos + 1);
+                            state = State.START;
+                            return token;
+                        }
                     }
                     else if (imageOpSet.contains(input.substring(startPos, currPosition + 1))) {
                         IToken token = new Token(IToken.Kind.IMAGE_OP, input.substring(startPos, currPosition), currPosition, currPosition - startPos + 1);
@@ -229,17 +253,147 @@ public class Lexer implements ILexer {
                             currPosition++;
                         }
                         default -> {
-                            IToken token = new Token(IToken.Kind.ERROR, input.substring(startPos, currPosition), currPosition, currPosition - startPos + 1);
-                            state = State.START;
+                            state = State.ERROR;
                             throw new LexicalException("Invalid dot");
                         }
                     }
                 }
+                case IN_FLOAT -> {
+                    char ch = input.charAt(currPosition);
+                    switch(ch) {
+                        case '0','1','2','3','4','5','6','7','8','9' -> {
+                            state = State.IN_FLOAT;
+                            currPosition++;
+                        }
+                        default -> {
+                            IToken token = new Token(IToken.Kind.FLOAT_LIT, input.substring(startPos, currPosition), currPosition - 1,1);
+                            state = State.START;
+                            return token;
+                        }
+                    }
+                }
                 case IN_STRING -> {
+                    char ch = input.charAt(currPosition);
+                    switch(ch) {
+                        case '\\' -> {
+                            state = State.IN_SLASH;
+                            currPosition++;
+                        }
+                        case '"' -> {
+                            IToken token = new Token(IToken.Kind.STRING_LIT, input.substring(startPos, currPosition), currPosition, currPosition - startPos + 1);
+                            state = State.START;
+                            currPosition++;
+                            return token;
+                        }
+                        default -> {
+                            state = State.IN_STRING;
+                            currPosition++;
+                        }
+                    }
+                }
+                case IN_SLASH -> {
+                    char ch = input.charAt(currPosition);
+                    switch(ch) {
+                        case 'b','t','n','f','r','"','\'','\\' -> {
+                            state = State.IN_STRING;
+                            currPosition++;
+                        }
+                        default -> {
+                            state = State.ERROR;
+                            throw new LexicalException("Not a valid escape sequence");
+                        }
+                    }
+                }
+                case HAVE_MINUS -> {
+                    char ch = input.charAt(currPosition);
+                    switch(ch) {
+                        case '>' -> {
+                            IToken token = new Token(IToken.Kind.RARROW, input.substring(startPos, currPosition), currPosition, currPosition - startPos + 1);
+                            state = State.START;
+                            currPosition++;
+                            return token;
+                        }
+                        default -> {
+                            IToken token = new Token(IToken.Kind.MINUS, input.substring(startPos, currPosition), currPosition - 1, 1);
+                            state = State.START;
+                            return token;
+                        }
+                    }
+                }
+                case HAVE_EX -> {
+                    char ch = input.charAt(currPosition);
+                    switch(ch) {
+                        case '=' -> {
+                            IToken token = new Token(IToken.Kind.NOT_EQUALS, input.substring(startPos, currPosition), currPosition, currPosition - startPos + 1);
+                            state = State.START;
+                            currPosition++;
+                            return token;
+                        }
+                        default -> {
+                            IToken token = new Token(IToken.Kind.BANG, input.substring(startPos, currPosition), currPosition - 1, 1);
+                            state = State.START;
+                            return token;
+                        }
+                    }
+                }
+                case HAVE_LT -> { // <
+                    char ch = input.charAt(currPosition);
+                    switch(ch) {
+                        case '<' -> { //<<
+                            IToken token = new Token(IToken.Kind.LANGLE, input.substring(startPos, currPosition), currPosition, currPosition - startPos + 1);
+                            state = State.START;
+                            currPosition++;
+                            return token;
+                        }
+                        case '-' -> { //<-
+                            IToken token = new Token(IToken.Kind.LARROW, input.substring(startPos, currPosition), currPosition, currPosition - startPos + 1);
+                            state = State.START;
+                            currPosition++;
+                            return token;
+                        }
+                        case '=' -> { //<=
+                            IToken token = new Token(IToken.Kind.LE, input.substring(startPos, currPosition), currPosition, currPosition - startPos + 1);
+                            state = State.START;
+                            currPosition++;
+                            return token;
 
+                        }
+                        default -> { // <
+                            IToken token = new Token(IToken.Kind.LT, input.substring(startPos, currPosition), currPosition - 1, 1);
+                            state = State.START;
+                            return token;
+                        }
+                    }
+                }
+                case HAVE_GT -> { // >
+                    char ch = input.charAt(currPosition);
+                    switch(ch) {
+                        case '>' -> { // >>
+                            IToken token = new Token(IToken.Kind.RANGLE, input.substring(startPos, currPosition), currPosition, currPosition - startPos + 1);
+                            state = State.START;
+                            currPosition++;
+                            return token;
+                        }
+                        case '=' -> { //>=
+                            IToken token = new Token(IToken.Kind.GE, input.substring(startPos, currPosition), currPosition, currPosition - startPos + 1);
+                            state = State.START;
+                            currPosition++;
+                            return token;
+                        }
+                        default -> {
+                            IToken token = new Token(IToken.Kind.GT, input.substring(startPos, currPosition), currPosition - 1, 1);
+                            state = State.START;
+                            return token;
+                        }
+                    }
                 }
             }
         }
+
+        if(state == State.IN_STRING) {
+            throw new LexicalException("Never closed \"");
+        }
+        throw new LexicalException("Invalid token");
     }
 
     @Override
@@ -269,8 +423,12 @@ public class Lexer implements ILexer {
         IN_FLOAT,
         IN_NUM,
         IN_STRING,
+        IN_SLASH,
         HAVE_EQ,
         HAVE_MINUS,
+        HAVE_EX,
+        HAVE_LT,
+        HAVE_GT,
         ERROR
     }
 }
