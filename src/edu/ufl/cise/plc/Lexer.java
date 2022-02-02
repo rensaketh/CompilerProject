@@ -11,11 +11,10 @@ public class Lexer implements ILexer {
         State state = State.START;
         int startPos = currPosition;
         if(currPosition >= input.length()) {
-            IToken token = new Token(IToken.Kind.EOF, "", currPosition, lineNumber, colNumber);
-            return token;
+            return new Token(IToken.Kind.EOF, "", currPosition, lineNumber, colNumber);
         }
         int currTokenLine = lineNumber; int currTokenCol = colNumber;
-        //TODO: Need to preserve line and col number for each token, while also having general location throughout input
+        
         while(currPosition < input.length()) { //loop through string
             switch(state) {
                 case START -> {
@@ -175,9 +174,7 @@ public class Lexer implements ILexer {
                         currPosition++;colNumber++;
                     }
                     else {
-                        IToken token = new Token(IToken.Kind.INT_LIT, input.substring(startPos, currPosition), currPosition, currTokenLine, currTokenCol);
-                        state = State.START;
-                        return token;
+                        return new Token(IToken.Kind.INT_LIT, input.substring(startPos, currPosition), currPosition, currTokenLine, currTokenCol);
                     }
                 }
                 case IN_NUM -> {
@@ -192,9 +189,14 @@ public class Lexer implements ILexer {
                             currPosition++;colNumber++;
                         }
                         default -> {
-                            IToken token = new Token(IToken.Kind.INT_LIT, input.substring(startPos, currPosition), currPosition, currTokenLine, currTokenCol);
-                            state = State.START;
-                            return token;
+                            try {
+                                String tmp = input.substring(startPos, currPosition);
+                                Integer.parseInt(tmp);
+                                return new Token(IToken.Kind.INT_LIT, input.substring(startPos, currPosition), currPosition, currTokenLine, currTokenCol);
+                            }
+                            catch(Exception e) {
+                                throw new LexicalException("Integer overflow", new IToken.SourceLocation(currTokenLine, currTokenCol));
+                            }
                         }
                     }
                 }
@@ -203,61 +205,39 @@ public class Lexer implements ILexer {
                     String tmp = input.substring(startPos, currPosition + 1);
                     if(typeSet.contains(input.substring(startPos, currPosition + 1))) {
                         if (tmp.equals("void")){
-                            IToken token = new Token(IToken.Kind.KW_VOID, tmp, currPosition, currTokenLine, currTokenCol);
-                            state = State.START;
-                            return token;
+                            return new Token(IToken.Kind.KW_VOID, tmp, currPosition, currTokenLine, currTokenCol);
                         }
                         else {
-                            IToken token = new Token(IToken.Kind.TYPE, tmp, currPosition, currTokenLine, currTokenCol);
-                            state = State.START;
-                            return token;
+                            return new Token(IToken.Kind.TYPE, tmp, currPosition, currTokenLine, currTokenCol);
                         }
                     }
                     else if (imageOpSet.contains(input.substring(startPos, currPosition + 1))) {
-                        IToken token = new Token(IToken.Kind.IMAGE_OP, tmp, currPosition, currTokenLine, currTokenCol);
-                        state = State.START;
-                        return token;
+                        return new Token(IToken.Kind.IMAGE_OP, tmp, currPosition, currTokenLine, currTokenCol);
                     }
                     else if (colorOpSet.contains(input.substring(startPos, currPosition + 1))) {
-                        IToken token = new Token(IToken.Kind.COLOR_OP, tmp, currPosition, currTokenLine, currTokenCol);
-                        state = State.START;
-                        return token;
+                        return new Token(IToken.Kind.COLOR_OP, tmp, currPosition, currTokenLine, currTokenCol);
                     }
                     else if (colorConstSet.contains(input.substring(startPos, currPosition + 1))) {
-                        IToken token = new Token(IToken.Kind.COLOR_CONST, tmp, currPosition, currTokenLine, currTokenCol);
-                        state = State.START;
-                        return token;
+                        return new Token(IToken.Kind.COLOR_CONST, tmp, currPosition, currTokenLine, currTokenCol);
                     }
                     else if (boolean_LitSet.contains(input.substring(startPos, currPosition + 1))) {
-                        IToken token = new Token(IToken.Kind.BOOLEAN_LIT, tmp, currPosition, currTokenLine, currTokenCol);
-                        state = State.START;
-                        return token;
+                        return new Token(IToken.Kind.BOOLEAN_LIT, tmp, currPosition, currTokenLine, currTokenCol);
                     }
                     else if (otherKeywordsSet.contains(input.substring(startPos, currPosition + 1))) {
                         if (tmp.equals("if")){
-                            IToken token = new Token(IToken.Kind.KW_IF, tmp, currPosition, currTokenLine, currTokenCol);
-                            state = State.START;
-                            return token;
+                            return new Token(IToken.Kind.KW_IF, tmp, currPosition, currTokenLine, currTokenCol);
                         }
                         else if(tmp.equals("else")) {
-                            IToken token = new Token(IToken.Kind.KW_ELSE, tmp, currPosition, currTokenLine, currTokenCol);
-                            state = State.START;
-                            return token;
+                            return new Token(IToken.Kind.KW_ELSE, tmp, currPosition, currTokenLine, currTokenCol);
                         }
                         else if(tmp.equals("fi")) {
-                            IToken token = new Token(IToken.Kind.KW_FI, tmp, currPosition, currTokenLine, currTokenCol);
-                            state = State.START;
-                            return token;
+                            return new Token(IToken.Kind.KW_FI, tmp, currPosition, currTokenLine, currTokenCol);
                         }
                         else if(tmp.equals("write")) {
-                            IToken token = new Token(IToken.Kind.KW_WRITE, tmp, currPosition, currTokenLine, currTokenCol);
-                            state = State.START;
-                            return token;
+                            return new Token(IToken.Kind.KW_WRITE, tmp, currPosition, currTokenLine, currTokenCol);
                         }
                         else if(tmp.equals("console")) {
-                            IToken token = new Token(IToken.Kind.KW_CONSOLE, tmp, currPosition, currTokenLine, currTokenCol);
-                            state = State.START;
-                            return token;
+                            return new Token(IToken.Kind.KW_CONSOLE, tmp, currPosition, currTokenLine, currTokenCol);
                         }
                     }
                     switch(ch) {
@@ -268,9 +248,7 @@ public class Lexer implements ILexer {
                             currPosition++;colNumber++;
                         }
                         default -> {
-                            IToken token = new Token(IToken.Kind.IDENT, input.substring(startPos, currPosition), currPosition, currTokenLine, currTokenCol);
-                            state = State.START;
-                            return token;
+                            return new Token(IToken.Kind.IDENT, input.substring(startPos, currPosition), currPosition, currTokenLine, currTokenCol);
                         }
                     }
                 }
@@ -295,9 +273,14 @@ public class Lexer implements ILexer {
                             currPosition++;colNumber++;
                         }
                         default -> {
-                            IToken token = new Token(IToken.Kind.FLOAT_LIT, input.substring(startPos, currPosition), currPosition - 1, currTokenLine, currTokenCol);
-                            state = State.START;
-                            return token;
+                            try {
+                                String tmp = input.substring(startPos, currPosition);
+                                Float.parseFloat(tmp);
+                                return new Token(IToken.Kind.FLOAT_LIT, input.substring(startPos, currPosition), currPosition - 1, currTokenLine, currTokenCol);
+                            }
+                            catch(Exception e) {
+                                throw new LexicalException("Float overflow", new IToken.SourceLocation(currTokenLine, currTokenCol));
+                            }
                         }
                     }
                 }
@@ -310,7 +293,6 @@ public class Lexer implements ILexer {
                         }
                         case '"' -> {
                             IToken token = new Token(IToken.Kind.STRING_LIT, input.substring(startPos, currPosition), currPosition, currTokenLine, currTokenCol);
-                            state = State.START;
                             currPosition++;colNumber++;
                             return token;
                         }
@@ -338,14 +320,11 @@ public class Lexer implements ILexer {
                     switch(ch) {
                         case '>' -> {
                             IToken token = new Token(IToken.Kind.RARROW, input.substring(startPos, currPosition), currPosition, currTokenLine, currTokenCol);
-                            state = State.START;
                             currPosition++;colNumber++;
                             return token;
                         }
                         default -> {
-                            IToken token = new Token(IToken.Kind.MINUS, input.substring(startPos, currPosition), currPosition - 1, currTokenLine, currTokenCol);
-                            state = State.START;
-                            return token;
+                            return new Token(IToken.Kind.MINUS, input.substring(startPos, currPosition), currPosition - 1, currTokenLine, currTokenCol);
                         }
                     }
                 }
@@ -354,14 +333,11 @@ public class Lexer implements ILexer {
                     switch(ch) {
                         case '=' -> {
                             IToken token = new Token(IToken.Kind.NOT_EQUALS, input.substring(startPos, currPosition), currPosition, currTokenLine, currTokenCol);
-                            state = State.START;
                             currPosition++;colNumber++;
                             return token;
                         }
                         default -> {
-                            IToken token = new Token(IToken.Kind.BANG, input.substring(startPos, currPosition), currPosition - 1, currTokenLine, currTokenCol);
-                            state = State.START;
-                            return token;
+                            return new Token(IToken.Kind.BANG, input.substring(startPos, currPosition), currPosition - 1, currTokenLine, currTokenCol);
                         }
                     }
                 }
@@ -370,27 +346,22 @@ public class Lexer implements ILexer {
                     switch(ch) {
                         case '<' -> { //<<
                             IToken token = new Token(IToken.Kind.LANGLE, input.substring(startPos, currPosition), currPosition, currTokenLine, currTokenCol);
-                            state = State.START;
                             currPosition++;colNumber++;
                             return token;
                         }
                         case '-' -> { //<-
                             IToken token = new Token(IToken.Kind.LARROW, input.substring(startPos, currPosition), currPosition, currTokenLine, currTokenCol);
-                            state = State.START;
                             currPosition++;colNumber++;
                             return token;
                         }
                         case '=' -> { //<=
                             IToken token = new Token(IToken.Kind.LE, input.substring(startPos, currPosition), currPosition, currTokenLine, currTokenCol);
-                            state = State.START;
                             currPosition++;colNumber++;
                             return token;
 
                         }
                         default -> { // <
-                            IToken token = new Token(IToken.Kind.LT, input.substring(startPos, currPosition), currPosition - 1, currTokenLine, currTokenCol);
-                            state = State.START;
-                            return token;
+                            return new Token(IToken.Kind.LT, input.substring(startPos, currPosition), currPosition - 1, currTokenLine, currTokenCol);
                         }
                     }
                 }
@@ -399,59 +370,50 @@ public class Lexer implements ILexer {
                     switch(ch) {
                         case '>' -> { // >>
                             IToken token = new Token(IToken.Kind.RANGLE, input.substring(startPos, currPosition), currPosition, currTokenLine, currTokenCol);
-                            state = State.START;
                             currPosition++;colNumber++;
                             return token;
                         }
                         case '=' -> { //>=
                             IToken token = new Token(IToken.Kind.GE, input.substring(startPos, currPosition), currPosition, currTokenLine, currTokenCol);
-                            state = State.START;
                             currPosition++;colNumber++;
                             return token;
                         }
                         default -> {
-                            IToken token = new Token(IToken.Kind.GT, input.substring(startPos, currPosition), currPosition - 1, currTokenLine, currTokenCol);
-                            state = State.START;
-                            return token;
+                            return new Token(IToken.Kind.GT, input.substring(startPos, currPosition), currPosition - 1, currTokenLine, currTokenCol);
                         }
                     }
                 }
                 case HAVE_EQ -> {
                     char ch = input.charAt(currPosition);
+                    colNumber++;
                     switch(ch) {
                         case '=' -> { //==
                             IToken token = new Token(IToken.Kind.EQUALS, input.substring(startPos, currPosition), currPosition, currTokenLine, currTokenCol);
-                            state = State.START;
-                            currPosition++;colNumber++;
+                            currPosition++;
                             return token;
                         }
                         default -> {
-                            IToken token = new Token(IToken.Kind.ASSIGN, input.substring(startPos, currPosition), currPosition - 1, currTokenLine, currTokenCol);
-                            state = State.START;
-                            return token;
+                            return new Token(IToken.Kind.ASSIGN, input.substring(startPos, currPosition), currPosition - 1, currTokenLine, currTokenCol);
                         }
                     }
                 }
             }
         }
 
-        if(state == State.IN_STRING) {
+        if(state == State.START) {
+            return new Token(IToken.Kind.EOF, "", currPosition, lineNumber, colNumber);
+        }
+        else if(state == State.IN_STRING) {
             throw new LexicalException("Never closed \"", new IToken.SourceLocation(currTokenLine, currTokenCol));
         }
         else if(state == State.IN_NUM) {
-            IToken token = new Token(IToken.Kind.INT_LIT, input.substring(startPos, currPosition), currPosition, currTokenLine, currTokenCol);
-            state = State.START;
-            return token;
+            return new Token(IToken.Kind.INT_LIT, input.substring(startPos, currPosition), currPosition, currTokenLine, currTokenCol);
         }
         else if(state == State.IN_FLOAT) {
-            IToken token = new Token(IToken.Kind.FLOAT_LIT, input.substring(startPos, currPosition), currPosition, currTokenLine, currTokenCol);
-            state = State.START;
-            return token;
+            return new Token(IToken.Kind.FLOAT_LIT, input.substring(startPos, currPosition), currPosition, currTokenLine, currTokenCol);
         }
         else if(state == State.IN_IDENT) {
-            IToken token = new Token(IToken.Kind.IDENT, input.substring(startPos, currPosition), currPosition, currTokenLine, currTokenCol);
-            state = State.START;
-            return token;
+            return new Token(IToken.Kind.IDENT, input.substring(startPos, currPosition), currPosition, currTokenLine, currTokenCol);
         }
         throw new LexicalException("Invalid token");
     }
@@ -465,14 +427,14 @@ public class Lexer implements ILexer {
         this.input = input;
     }
 
-    private Set<String> typeSet = new HashSet<>(Arrays.asList("string","int","float","boolean","color","image","void"));
-    private Set<String> imageOpSet = new HashSet<>(Arrays.asList("getWidth", "getHeight"));
-    private Set<String> colorOpSet = new HashSet<>(Arrays.asList("getRed","getGreen","getBlue"));
-    private Set<String> colorConstSet = new HashSet<>(Arrays.asList("BLACK", "BLUE", "CYAN", "DARK_GRAY", "GRAY",
+    private final Set<String> typeSet = new HashSet<>(Arrays.asList("string","int","float","boolean","color","image","void"));
+    private final Set<String> imageOpSet = new HashSet<>(Arrays.asList("getWidth", "getHeight"));
+    private final Set<String> colorOpSet = new HashSet<>(Arrays.asList("getRed","getGreen","getBlue"));
+    private final Set<String> colorConstSet = new HashSet<>(Arrays.asList("BLACK", "BLUE", "CYAN", "DARK_GRAY", "GRAY",
             "GREEN", "LIGHT_GRAY", "MAGENTA", "ORANGE", "PINK","RED", "WHITE", "YELLOW"));
-    private Set<String> boolean_LitSet = new HashSet<>(Arrays.asList("true", "false"));
-    private Set<String> otherKeywordsSet = new HashSet<>(Arrays.asList("if","else","fi","write","console"));
-    private String input;
+    private final Set<String> boolean_LitSet = new HashSet<>(Arrays.asList("true", "false"));
+    private final Set<String> otherKeywordsSet = new HashSet<>(Arrays.asList("if","else","fi","write","console"));
+    private final String input;
     private int currPosition = 0;
     private int lineNumber = 0; private int colNumber = 0;
     private enum State {
