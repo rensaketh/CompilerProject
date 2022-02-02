@@ -13,27 +13,27 @@ public class Token implements IToken{
 
     @Override
     public SourceLocation getSourceLocation() {
-        return null;
+        return loc;
     }
 
     @Override
     public int getIntValue() {
-        return 0;
+        return Integer.parseInt(input);
     }
 
     @Override
     public float getFloatValue() {
-        return 0;
+        return Float.parseFloat(input);
     }
 
     @Override
     public boolean getBooleanValue() {
-        return false;
+        return Boolean.parseBoolean(input);
     }
 
     @Override
     public String getStringValue() {
-        return null;
+        return input.translateEscapes();
     }
 
     /*public Token(Kind kind, String input, int position, int length) {
@@ -43,9 +43,10 @@ public class Token implements IToken{
         this.length = length;
     }*/
 
-    public Token(Kind kind, String input, int lineNum, int colNum) {
+    public Token(Kind kind, String input, int posInInput, int lineNum, int colNum) {
         this.kind = kind;
         this.input = input;
+        this.pos = posInInput;
         this.loc = new SourceLocation(lineNum, colNum);
     }
 
