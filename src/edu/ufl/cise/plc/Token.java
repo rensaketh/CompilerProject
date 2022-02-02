@@ -36,15 +36,22 @@ public class Token implements IToken{
         return null;
     }
 
-    public Token(Kind kind, String input, int position, int length) {
+    /*public Token(Kind kind, String input, int position, int length) {
         this.kind = kind;
         this.input = input;
         this.pos = position;
         this.length = length;
+    }*/
+
+    public Token(Kind kind, String input, int lineNum, int colNum) {
+        this.kind = kind;
+        this.input = input;
+        this.loc = new SourceLocation(lineNum, colNum);
     }
 
     private Kind kind;
     private String input;
+    private SourceLocation loc;
     private int pos;
     private int length;
 }

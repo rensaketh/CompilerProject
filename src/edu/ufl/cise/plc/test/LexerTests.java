@@ -186,4 +186,18 @@ public class LexerTests {
 		});
 	}
 
+	@Test
+	public void test3() throws LexicalException {
+		String input = """
+                "good"
+                "test
+
+                """;
+		ILexer lexer = getLexer(input);
+		checkToken(lexer.next(), Kind.STRING_LIT, 0, 0);
+		Exception e = assertThrows(LexicalException.class, () -> {
+			lexer.next();
+		});
+	}
+
 }
