@@ -373,5 +373,18 @@ public class LexerTests {
 			IToken token = lexer.next();
 		});
 	}
+	@Test
+	void testSentence() throws LexicalException {
+		String input = """
+    I love this class
+				""";
+		show(input);
+		ILexer lexer = getLexer(input);
+		checkIdent(lexer.next(),"I",0,0);
+		checkIdent(lexer.next(),"love", 0,1);
+		checkIdent(lexer.next(),"this",0,5);
+		checkIdent(lexer.next(),"class",0,9);
+		checkEOF(lexer.next());
+	}
 
 }
