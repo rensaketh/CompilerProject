@@ -26,7 +26,7 @@ public class Lexer implements ILexer {
                             lineNumber++;
                             colNumber = 0;
                         }
-                        case '\t', ' ' -> { //have to include comment in future as well '
+                        case '\t', ' ' -> {
                             currPosition++;
                             colNumber++;
                         }
@@ -80,7 +80,6 @@ public class Lexer implements ILexer {
                             currPosition++;colNumber++;
                             return token;
                         }
-
                         case ';' -> {
                             IToken token = new Token(IToken.Kind.SEMI, input.substring(startPos, currPosition + 1), currPosition, lineNumber, colNumber);
                             currPosition++;colNumber++;
@@ -96,9 +95,6 @@ public class Lexer implements ILexer {
                             currPosition++;colNumber++;
                             return token;
                         }
-                        /*case '#' -> { //comment
-
-                        }*/
 
                         //More than one state
 
@@ -160,6 +156,9 @@ public class Lexer implements ILexer {
                             currTokenLine = lineNumber;
                             state = State.HAVE_GT;
                             currPosition++;
+                        }
+                        case '#' -> { //comment
+                            state = State.IN_COMMENT;
                         }
                         default -> {
                             state = State.ERROR;
@@ -397,6 +396,35 @@ public class Lexer implements ILexer {
                         }
                     }
                 }
+                case IN_COMMENT -> {
+                    currPosition++;
+                    colNumber++;
+                    char ch = input.charAt(currPosition);
+                    switch(ch) {
+                        case '\n' -> {
+                            currPosition++;
+                            lineNumber++;
+                            colNumber = 0;
+                            state = State.START;
+                        }
+                        case '\r' -> {
+                            currPosition++;
+                            colNumber++;
+                            if(input.charAt(currPosition) == '\n') {
+                                currPosition++;
+                                lineNumber++;
+                                colNumber = 0;
+                                state = State.START;
+                            }
+                            else {
+                                throw new LexicalException("\r not followed by \n", new IToken.SourceLocation(lineNumber, colNumber));
+                            }
+                        }
+                        default -> {
+                            state = State.IN_COMMENT;
+                        }
+                    }
+                }
             }
         }
 
@@ -451,6 +479,7 @@ public class Lexer implements ILexer {
         HAVE_EX,
         HAVE_LT,
         HAVE_GT,
+        IN_COMMENT,
         ERROR
     }
 }
