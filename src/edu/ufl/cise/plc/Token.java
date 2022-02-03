@@ -33,7 +33,8 @@ public class Token implements IToken{
 
     @Override
     public String getStringValue() {
-        return input.translateEscapes();
+        String tmp = input.substring(1, input.length() - 1);
+        return tmp.translateEscapes();
     }
 
     /*public Token(Kind kind, String input, int position, int length) {
