@@ -643,4 +643,66 @@ public class LexerTests {
 			IToken token = lexer.next();
 		});
 	}
+
+	@Test
+	void testOnlyEmptyStringLit() throws LexicalException {
+		String input = "\"\"";
+		show(input);
+		ILexer lexer = getLexer(input);
+		checkToken(lexer.next(), Kind.STRING_LIT, 0, 0, "\"\"");
+	}
+
+	@Test
+	void testErrorOnDotOperator() throws LexicalException {
+		String input = "myObject.myProperty";
+		show(input);
+		ILexer lexer = getLexer(input);
+		checkToken(lexer.next(), Kind.IDENT, 0, 0);
+		assertThrows(LexicalException.class, () -> {
+			@SuppressWarnings("unused")
+			IToken token = lexer.next();
+		});
+
+	}
+
+	@Test
+	void testKeywordWithinIdent() throws LexicalException {
+		String input = "stringVar\nifBlah\nREDfoo";
+		show(input);
+		ILexer lexer = getLexer(input);
+		checkToken(lexer.next(), Kind.TYPE, 0, 0);
+		checkToken(lexer.next(), Kind.IDENT, 0, 6);
+		checkToken(lexer.next(), Kind.KW_IF, 1, 0);
+		checkToken(lexer.next(), Kind.IDENT, 1, 2);
+		checkToken(lexer.next(), Kind.COLOR_CONST, 2, 0);
+		checkToken(lexer.next(), Kind.IDENT, 2, 3);
+	}
+
+	//Copy of previous one but this time using Peek
+	@Test
+	public void testPeek() throws LexicalException {
+		String input = """
+			abc
+			  def
+			     ghi
+				""";
+		show(input);
+		ILexer lexer = getLexer(input);
+		checkIdent(lexer.peek(), "abc", 0,0);
+		checkIdent(lexer.next(), "abc", 0,0);
+
+		checkIdent(lexer.peek(), "def", 1,2);
+		checkIdent(lexer.peek(), "def", 1,2);
+		checkIdent(lexer.next(), "def", 1,2);
+
+		checkIdent(lexer.peek(), "ghi", 2,5);
+		checkIdent(lexer.peek(), "ghi", 2,5);
+		checkIdent(lexer.peek(), "ghi", 2,5);
+		checkIdent(lexer.next(), "ghi", 2,5);
+
+		checkEOF(lexer.peek());
+		checkEOF(lexer.next());
+	}
+
+
 }
