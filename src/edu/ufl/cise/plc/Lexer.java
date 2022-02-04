@@ -539,6 +539,9 @@ public class Lexer implements ILexer {
         else if(state == State.HAVE_EX) {
             return new Token(IToken.Kind.BANG, input.substring(startPos, currPosition), currPosition, currTokenLine, currTokenCol);
         }
+        else if(state == State.IN_KEYWORD) {
+            return new Token(keywordKind, input.substring(startPos, currPosition), currPosition, currTokenLine, currTokenCol);
+        }
         throw new LexicalException("Invalid token");
     }
 
