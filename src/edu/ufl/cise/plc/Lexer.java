@@ -316,7 +316,7 @@ public class Lexer implements ILexer {
                         case '\n', '\r' -> {
                             state = State.IN_STRING;
                             lineNumber++;
-                            colNumber = 0;
+                            colNumber = -1;
                         }
                         case '\t' -> {
                             state = State.IN_STRING;

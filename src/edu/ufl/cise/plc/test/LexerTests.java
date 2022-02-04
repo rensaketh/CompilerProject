@@ -670,12 +670,9 @@ public class LexerTests {
 		String input = "stringVar\nifBlah\nREDfoo";
 		show(input);
 		ILexer lexer = getLexer(input);
-		checkToken(lexer.next(), Kind.TYPE, 0, 0);
-		checkToken(lexer.next(), Kind.IDENT, 0, 6);
-		checkToken(lexer.next(), Kind.KW_IF, 1, 0);
-		checkToken(lexer.next(), Kind.IDENT, 1, 2);
-		checkToken(lexer.next(), Kind.COLOR_CONST, 2, 0);
-		checkToken(lexer.next(), Kind.IDENT, 2, 3);
+		checkToken(lexer.next(), Kind.IDENT, 0, 0);
+		checkToken(lexer.next(), Kind.IDENT, 1, 0);
+		checkToken(lexer.next(), Kind.IDENT, 2, 0);
 	}
 
 	//Copy of previous one but this time using Peek
@@ -704,5 +701,20 @@ public class LexerTests {
 		checkEOF(lexer.next());
 	}
 
+	@Test
+	public void multiLineString() throws LexicalException{
+		String input = """
+                string a = "test
+                52";
+                a
+                """;
+		ILexer lexer = getLexer(input);
+		checkToken(lexer.next(), Kind.TYPE, 0, 0, "string");
+		checkIdent(lexer.next(), "a", 0, 7);
+		checkToken(lexer.next(), Kind.ASSIGN, 0, 9);
+		checkToken(lexer.next(), Kind.STRING_LIT, 0, 11, "\"test\n52\"");
+		checkToken(lexer.next(), Kind.SEMI, 1, 3);
+		checkIdent(lexer.next(), "a", 2, 0);
+	}
 
 }
