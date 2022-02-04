@@ -14,7 +14,7 @@ public class Lexer implements ILexer {
             return new Token(IToken.Kind.EOF, "", currPosition, lineNumber, colNumber);
         }
         int currTokenLine = lineNumber; int currTokenCol = colNumber;
-        
+        IToken.Kind keywordKind = null;
         while(currPosition < input.length()) { //loop through string
             switch(state) {
                 case START -> {
@@ -203,57 +203,77 @@ public class Lexer implements ILexer {
                     char ch = input.charAt(currPosition);
                     String tmp = input.substring(startPos, currPosition + 1);
                     if(typeSet.contains(input.substring(startPos, currPosition + 1))) {
-                        currPosition++;colNumber++;
+                        state = State.IN_KEYWORD;
                         if (tmp.equals("void")){
-                            return new Token(IToken.Kind.KW_VOID, tmp, currPosition - 1, currTokenLine, currTokenCol);
+                            keywordKind = IToken.Kind.KW_VOID;
+                            //return new Token(IToken.Kind.KW_VOID, tmp, currPosition - 1, currTokenLine, currTokenCol);
                         }
                         else {
-                            return new Token(IToken.Kind.TYPE, tmp, currPosition - 1, currTokenLine, currTokenCol);
+                            keywordKind = IToken.Kind.TYPE;
                         }
                     }
                     else if (imageOpSet.contains(input.substring(startPos, currPosition + 1))) {
-                        currPosition++;colNumber++;
-                        return new Token(IToken.Kind.IMAGE_OP, tmp, currPosition - 1, currTokenLine, currTokenCol);
+                        state = State.IN_KEYWORD;
+                        keywordKind = IToken.Kind.IMAGE_OP;
                     }
                     else if (colorOpSet.contains(input.substring(startPos, currPosition + 1))) {
-                        currPosition++;colNumber++;
-                        return new Token(IToken.Kind.COLOR_OP, tmp, currPosition - 1, currTokenLine, currTokenCol);
+                        state = State.IN_KEYWORD;
+                        keywordKind = IToken.Kind.COLOR_OP;
                     }
                     else if (colorConstSet.contains(input.substring(startPos, currPosition + 1))) {
-                        currPosition++;colNumber++;
-                        return new Token(IToken.Kind.COLOR_CONST, tmp, currPosition - 1, currTokenLine, currTokenCol);
+                        state = State.IN_KEYWORD;
+                        keywordKind = IToken.Kind.COLOR_CONST;
                     }
                     else if (boolean_LitSet.contains(input.substring(startPos, currPosition + 1))) {
-                        currPosition++;colNumber++;
-                        return new Token(IToken.Kind.BOOLEAN_LIT, tmp, currPosition - 1, currTokenLine, currTokenCol);
+                        state = State.IN_KEYWORD;
+                        keywordKind = IToken.Kind.BOOLEAN_LIT;
                     }
                     else if (otherKeywordsSet.contains(input.substring(startPos, currPosition + 1))) {
-                        currPosition++;colNumber++;
+                        state = State.IN_KEYWORD;
                         if (tmp.equals("if")){
-                            return new Token(IToken.Kind.KW_IF, tmp, currPosition - 1, currTokenLine, currTokenCol);
+                            keywordKind = IToken.Kind.KW_IF;
                         }
                         else if(tmp.equals("else")) {
-                            return new Token(IToken.Kind.KW_ELSE, tmp, currPosition - 1, currTokenLine, currTokenCol);
+                            keywordKind = IToken.Kind.KW_ELSE;
                         }
                         else if(tmp.equals("fi")) {
-                            return new Token(IToken.Kind.KW_FI, tmp, currPosition - 1, currTokenLine, currTokenCol);
+                            keywordKind = IToken.Kind.KW_FI;
                         }
                         else if(tmp.equals("write")) {
-                            return new Token(IToken.Kind.KW_WRITE, tmp, currPosition - 1, currTokenLine, currTokenCol);
+                            keywordKind = IToken.Kind.KW_WRITE;
                         }
                         else if(tmp.equals("console")) {
-                            return new Token(IToken.Kind.KW_CONSOLE, tmp, currPosition - 1, currTokenLine, currTokenCol);
+                            keywordKind = IToken.Kind.KW_CONSOLE;
                         }
                     }
+                    else {
+                        switch (ch) {
+                            case 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+                                    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'Y', 'Z',
+                                    '_', '$', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' -> {
+                                state = State.IN_IDENT;
+                            }
+                            default -> {
+                                return new Token(IToken.Kind.IDENT, input.substring(startPos, currPosition), currPosition - 1, currTokenLine, currTokenCol);
+                            }
+                        }
+                    }
+                }
+                case IN_KEYWORD -> {
+                    currPosition++;colNumber++;
+                    if(currPosition >= input.length()) {
+                        break;
+                    }
+                    char ch = input.charAt(currPosition);
                     switch(ch) {
-                        case 'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z',
-                                'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','Y','Z',
-                                '_','$','0','1','2','3','4','5','6','7','8','9' -> {
+                        case 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+                                'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'Y', 'Z',
+                                '_', '$', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' -> {
                             state = State.IN_IDENT;
                             //currPosition++;colNumber++;
                         }
                         default -> {
-                            return new Token(IToken.Kind.IDENT, input.substring(startPos, currPosition), currPosition - 1, currTokenLine, currTokenCol);
+                            return new Token(keywordKind, input.substring(startPos, currPosition), currPosition - 1, currTokenLine, currTokenCol);
                         }
                     }
                 }
@@ -519,7 +539,6 @@ public class Lexer implements ILexer {
         else if(state == State.HAVE_EX) {
             return new Token(IToken.Kind.BANG, input.substring(startPos, currPosition), currPosition, currTokenLine, currTokenCol);
         }
-        //Add more if statements for rest of cases
         throw new LexicalException("Invalid token");
     }
 
@@ -560,6 +579,7 @@ public class Lexer implements ILexer {
         HAVE_LT,
         HAVE_GT,
         IN_COMMENT,
+        IN_KEYWORD,
         ERROR
     }
 }
