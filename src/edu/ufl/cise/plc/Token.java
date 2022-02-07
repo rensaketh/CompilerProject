@@ -54,6 +54,6 @@ public class Token implements IToken{
     private Kind kind;
     private String input;
     private SourceLocation loc;
-    private int pos;
+    private int pos; //location of last char in token
     private int length;
 }

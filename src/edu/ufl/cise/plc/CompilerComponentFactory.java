@@ -13,5 +13,9 @@ public class CompilerComponentFactory {
 		/*throw new UnsupportedOperationException(
 				"CompilerComponentFactory must be modified to return an instance of your lexer");*/
 	}
+
+	public static IParser getParser(String input) {
+		return null;
+	}
 	
 }

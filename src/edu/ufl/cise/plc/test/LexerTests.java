@@ -945,4 +945,91 @@ public class LexerTests {
 		checkToken(token, Kind.TYPE, 0, 0, "string");
 	}
 
+	@Test
+	void testIllegalIdent3() throws LexicalException
+	{
+		// Java's Character::isAlphabetic doesn't cut it -- it includes Unicode characters too
+		String input = "t\u01E2est";
+		show(input);
+		ILexer lexer = getLexer(input);
+		checkToken(lexer.next(), Kind.IDENT, 0, 0);
+		Exception e = assertThrows(LexicalException.class, () -> {
+			lexer.next();
+		});
+	}
+
+	@Test
+	public void testEmptyStringThenIdent() throws LexicalException
+	{
+		String input = "\"\"a";
+		ILexer lexer = getLexer(input);
+		checkToken(lexer.next(), Kind.STRING_LIT, 0, 0, "\"\"");
+		checkToken(lexer.next(), Kind.IDENT, 0, 2, "a");
+	}
+
+
+	@Test
+	public void testEmptyStringThenIdent2() throws LexicalException
+	{
+		String input = "\"\" a";
+		ILexer lexer = getLexer(input);
+		checkToken(lexer.next(), Kind.STRING_LIT, 0, 0, "\"\"");
+		checkToken(lexer.next(), Kind.IDENT, 0, 3, "a");
+	}
+
+
+	@Test
+	public void testEmptyStringThenEmptyString1() throws LexicalException
+	{
+		String input = "\"\"\"\"";
+		ILexer lexer = getLexer(input);
+		checkToken(lexer.next(), Kind.STRING_LIT, 0, 0, "\"\"");
+		checkToken(lexer.next(), Kind.STRING_LIT, 0, 2, "\"\"");
+	}
+
+
+	@Test
+	public void testEmptyStringThenEmptyString2() throws LexicalException
+	{
+		String input = "\"\" \"\"";
+		ILexer lexer = getLexer(input);
+		checkToken(lexer.next(), Kind.STRING_LIT, 0, 0, "\"\"");
+		checkToken(lexer.next(), Kind.STRING_LIT, 0, 3, "\"\"");
+	}
+
+
+	@Test
+	void testPointerDereference() throws LexicalException
+	{
+		String input = "myObject->myProperty";
+		show(input);
+		ILexer lexer = getLexer(input);
+		checkToken(lexer.next(), Kind.IDENT, 0, 0);
+		checkToken(lexer.next(), Kind.RARROW, 0, 8);
+		checkToken(lexer.next(), Kind.IDENT, 0, 10);
+	}
+
+
+	@Test
+	void testManyIdentsWithWhitespace() throws LexicalException
+	{
+		String input = "Did you ever hear the tragedy of Darth Plagueis \"the wise\"?";
+		show(input);
+		ILexer lexer = getLexer(input);
+		checkToken(lexer.next(), Kind.IDENT, 0, 0);
+		checkToken(lexer.next(), Kind.IDENT, 0, 4);
+		checkToken(lexer.next(), Kind.IDENT, 0, 8);
+		checkToken(lexer.next(), Kind.IDENT, 0, 13);
+		checkToken(lexer.next(), Kind.IDENT, 0, 18);
+		checkToken(lexer.next(), Kind.IDENT, 0, 22);
+		checkToken(lexer.next(), Kind.IDENT, 0, 30);
+		checkToken(lexer.next(), Kind.IDENT, 0, 33);
+		checkToken(lexer.next(), Kind.IDENT, 0, 39);
+		checkToken(lexer.next(), Kind.STRING_LIT, 0, 48, "\"the wise\"");
+		Exception e = assertThrows(LexicalException.class, () -> {
+			// It’s not a story the Jedi would tell you (jedis)
+			lexer.next();
+		});
+	}
+
 }
