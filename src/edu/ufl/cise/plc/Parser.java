@@ -16,7 +16,7 @@ public class Parser implements IParser {
     public Parser(String input) {
         this.input = input;
         try {
-            ILexer lexer = new Lexer(input);
+            ILexer lexer = CompilerComponentFactory.getLexer(input);
             IToken token = null;
             while(token.getKind() != IToken.Kind.EOF) {
                 token = lexer.next();
@@ -57,25 +57,25 @@ public class Parser implements IParser {
         }
         return expr;
     }
-    private Expr AdditiveExpr() {
+    private Expr AdditiveExpr() throws PLCException {
         Expr expr = MultiplicativeExpr();
         while (match(PLUS, MINUS)) {
             IToken operator = previous();
             Expr right = MultiplicativeExpr();
-            expr = new IntLitExpr(listOfTokens.get(0));
+            expr = new BinaryExpr(listOfTokens.get(0),expr, operator, right);
         }
         return expr;
     }
-    private Expr MultiplicativeExpr() {
+    private Expr MultiplicativeExpr() throws PLCException {
         Expr expr = UnaryExpr();
         while (match(TIMES, DIV, MOD)) {
             IToken operator = previous();
             Expr right = UnaryExpr();
-            expr = new IntLitExpr(listOfTokens.get(0));
+            expr = new BinaryExpr(listOfTokens.get(0),expr, operator, right);
         }
         return expr;
     }
-    private Expr UnaryExpr() {
+    private Expr UnaryExpr() throws PLCException {
         if (match(BANG, MINUS, COLOR_OP, IMAGE_OP)) {
             IToken operator = previous();
             Expr right = UnaryExpr();
@@ -83,13 +83,13 @@ public class Parser implements IParser {
         }
         return UnaryExprPostfix();
     }
-    private Expr UnaryExprPostfix() {
-        Expr expr = LogicalAndExpr();
-        while (match(OR)) {
+    private Expr UnaryExprPostfix() throws PLCException {
+        Expr expr = PrimaryExpr();
+        /*while (match(OR)) {
             IToken operator = previous();
             Expr right = PixelSelector();
             expr = new BinaryExpr(listOfTokens.get(0),expr, operator, right);
-        }
+        }*/
         return expr;
     }
 
@@ -97,7 +97,7 @@ public class Parser implements IParser {
         //need to fix
         return LogicalOrExpr();
     }
-    private Expr PrimaryExpr() throws SyntaxException{
+    private Expr PrimaryExpr() throws PLCException {
         if (match(BOOLEAN_LIT)) return new BooleanLitExpr(listOfTokens.get(0));
         if (match(STRING_LIT)) return new StringLitExpr(listOfTokens.get(0));
         if (match(INT_LIT)) return new IntLitExpr(listOfTokens.get(0));
@@ -110,10 +110,17 @@ public class Parser implements IParser {
                 throw new SyntaxException("Expect ')' after expression.");
             }
             consume();
-            return new Expr.Grouping(expr);
+            //return new Expr(listOfTokens.get(0));
         }
+
+        throw new SyntaxException("Not valid syntax");
     }
 
+    private Expr ConditionalExpr() {
+        if (match(LPAREN)) {
+
+        }
+    }
 
     /*private Expr factor() {
         IToken token = consume();
