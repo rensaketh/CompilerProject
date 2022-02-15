@@ -28,7 +28,7 @@ public class Parser implements IParser {
         }
     }
 
-    private Expr LogicalOrExpr() {
+    private Expr LogicalOrExpr() throws PLCException{
         Expr expr = LogicalAndExpr();
         while (match(OR)) {
             IToken operator = previous();
@@ -38,7 +38,7 @@ public class Parser implements IParser {
         return expr;
     }
 
-    private Expr LogicalAndExpr() {
+    private Expr LogicalAndExpr() throws PLCException{
         Expr expr = ComparisonExpr();
         while (match(AND)) {
             IToken operator = previous();
@@ -48,7 +48,7 @@ public class Parser implements IParser {
         return expr;
     }
 
-    private Expr ComparisonExpr() {
+    private Expr ComparisonExpr() throws PLCException {
         Expr expr = AdditiveExpr();
         while (match(LT, GT, EQUALS, NOT_EQUALS, LE, GE)) {
             IToken operator = previous();
@@ -93,7 +93,7 @@ public class Parser implements IParser {
         return expr;
     }
 
-    private Expr expression() {
+    private Expr expression() throws PLCException {
         //need to fix
         return LogicalOrExpr();
     }
