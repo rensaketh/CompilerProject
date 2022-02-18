@@ -2,6 +2,7 @@ package edu.ufl.cise.plc;
 
 import edu.ufl.cise.plc.ast.*;
 import edu.ufl.cise.plc.IToken.*;
+import edu.ufl.cise.plc.ast.*;
 
 import java.util.ArrayList;
 
@@ -19,7 +20,7 @@ public class Parser implements IParser {
         lexer = CompilerComponentFactory.getLexer(input);
     }
 
-    public Expr expr() throws PLCException {
+    private Expr expr() throws PLCException {
         IToken firstToken = t;
         if (isKind(KW_IF)) {
             consume();
@@ -47,12 +48,12 @@ public class Parser implements IParser {
         return LogicalOrExpr();
     }
 
-    public Expr LogicalOrExpr() throws PLCException {
+    private Expr LogicalOrExpr() throws PLCException {
         IToken firstToken = t;
         Expr left = null;
         Expr right = null;
         left = LogicalAndExpr();
-        while (isKind(OR) ) {
+        while (isKind(OR)) {
             IToken op = t;
             consume();
             right = LogicalAndExpr();
@@ -61,7 +62,7 @@ public class Parser implements IParser {
         return left;
     }
 
-    public Expr LogicalAndExpr() throws PLCException {
+    private Expr LogicalAndExpr() throws PLCException {
         IToken firstToken = t;
         Expr left = null;
         Expr right = null;
@@ -75,7 +76,7 @@ public class Parser implements IParser {
         return left;
     }
 
-    public Expr ComparisonExpr() throws PLCException {
+    private Expr ComparisonExpr() throws PLCException {
         IToken firstToken = t;
         Expr left = null;
         Expr right = null;
@@ -89,7 +90,7 @@ public class Parser implements IParser {
         return left;
     }
 
-    public Expr AdditiveExpr() throws PLCException {
+    private Expr AdditiveExpr() throws PLCException {
         IToken firstToken = t;
         Expr left = null;
         Expr right = null;
@@ -103,7 +104,7 @@ public class Parser implements IParser {
         return left;
     }
 
-    public Expr MultiplicativeExpr() throws PLCException {
+    private Expr MultiplicativeExpr() throws PLCException {
         IToken firstToken = t;
         Expr left = null;
         Expr right = null;
@@ -117,7 +118,7 @@ public class Parser implements IParser {
         return left;
     }
 
-    public Expr UnaryExpr() throws PLCException {
+    private Expr UnaryExpr() throws PLCException {
         IToken firstToken = t;
         Expr right = null;
 
@@ -130,7 +131,7 @@ public class Parser implements IParser {
         return UnaryExprPostfix();
     }
 
-    public Expr UnaryExprPostfix() throws PLCException {
+    private Expr UnaryExprPostfix() throws PLCException {
         IToken firstToken = t;
         Expr e = PrimaryExpr();
         if(isKind(LSQUARE)) {
@@ -154,7 +155,7 @@ public class Parser implements IParser {
         }
     }
 
-    public Expr PrimaryExpr() throws PLCException {
+    private Expr PrimaryExpr() throws PLCException {
         IToken firstToken = t;
         if(isKind(BOOLEAN_LIT)) {
             consume();
