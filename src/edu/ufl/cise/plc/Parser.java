@@ -5,6 +5,7 @@ import edu.ufl.cise.plc.IToken.*;
 import edu.ufl.cise.plc.ast.*;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import static edu.ufl.cise.plc.IToken.Kind.*;
 
@@ -12,7 +13,8 @@ public class Parser implements IParser {
     @Override
     public ASTNode parse() throws PLCException {
         consume();
-        return expr();
+        return program();
+        //return expr();
     }
 
     public Parser(String input) {
@@ -20,6 +22,61 @@ public class Parser implements IParser {
         lexer = CompilerComponentFactory.getLexer(input);
     }
 
+    private Program program() throws PLCException {
+        IToken firstToken = t;
+        Types.Type returnType = null;
+        if(!isKind(TYPE, KW_VOID)) {
+            throw new SyntaxException("Expected a type or void");
+        }
+        returnType = Types.Type.toType(t.getText());
+        consume();
+        String name = null;
+        if(!isKind(IDENT)) {
+            throw new SyntaxException("Expected an identifier");
+        }
+        name = t.getText();
+        consume();
+        if(!isKind(LPAREN)) {
+            throw new SyntaxException("Expected a (");
+        }
+        consume();
+        List<NameDef> params = new ArrayList<>();
+
+        if(isKind(TYPE)) {
+
+            params.add(NameDefDec());
+            while(isKind(COMMA)) {
+                IToken op = t;
+                consume();
+                params.add(NameDefDec());
+                //might need to add new NameDef, not sure
+            }
+        }
+        if(!isKind(RPAREN)) {
+            throw new SyntaxException("Expected a )");
+        }
+        consume();
+        Declaration d = null;
+        Statement s = null;
+        List<ASTNode> decsAndStatements = new ArrayList<>();
+        while(isKind(TYPE, IDENT, KW_WRITE, RETURN)) {
+            if(isKind(TYPE)) { //Declaration
+                decsAndStatements.add(declaration());
+                if(!isKind(SEMI)) {
+                    throw new SyntaxException("Expected semicolon");
+                }
+                consume();
+            }
+            else { //Statement
+                decsAndStatements.add(statement());
+                if(!isKind(SEMI)) {
+                    throw new SyntaxException("Expected semicolon");
+                }
+                consume();
+            }
+        }
+        return new Program(firstToken, returnType, name, params, decsAndStatements);
+    }
     private Declaration declaration() throws PLCException {
         IToken firstToken = t;
         NameDef left = null;
@@ -38,9 +95,10 @@ public class Parser implements IParser {
         IToken firstToken = t;
         if(isKind(TYPE)) {
             String type = t.getText();
-            String name = t.getStringValue();
+            String name = null;
             consume();
             if(isKind(IDENT)) {
+                name = t.getText();
                 consume();
                 return new NameDef(firstToken, type, name);
             }
@@ -49,6 +107,7 @@ public class Parser implements IParser {
                 if(!isKind(IDENT)) {
                     throw new SyntaxException("Expected identifier");
                 }
+                name = t.getText();
                 consume();
                 return new NameDefWithDim(firstToken, type, name, d);
             }
@@ -275,6 +334,7 @@ public class Parser implements IParser {
             if(!isKind(COMMA)) {
                 throw new SyntaxException("Expected comma");
             }
+            consume();
             Expr blue = expr();
             if(!isKind(RANGLE)) {
                 throw new SyntaxException("Expected right angle");
