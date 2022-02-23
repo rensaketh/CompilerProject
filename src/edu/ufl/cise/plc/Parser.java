@@ -20,6 +20,43 @@ public class Parser implements IParser {
         lexer = CompilerComponentFactory.getLexer(input);
     }
 
+    private Declaration declaration() throws PLCException {
+        IToken firstToken = t;
+        NameDef left = null;
+        left = NameDefDec();
+        IToken op = null;
+        Expr e = null;
+        if(isKind(ASSIGN, LARROW)) {
+            op = t;
+            consume();
+            e = expr();
+        }
+        return new VarDeclaration(firstToken, left, op, e);
+    }
+
+    private NameDef NameDefDec() throws PLCException {
+        IToken firstToken = t;
+        if(isKind(TYPE)) {
+            String type = t.getText();
+            String name = t.getStringValue();
+            consume();
+            if(isKind(IDENT)) {
+                consume();
+                return new NameDef(firstToken, type, name);
+            }
+            else if(isKind(LSQUARE)) {
+                Dimension d = dim();
+                if(!isKind(IDENT)) {
+                    throw new SyntaxException("Expected identifier");
+                }
+                consume();
+                return new NameDefWithDim(firstToken, type, name, d);
+            }
+            throw new SyntaxException("Invalid token after type");
+        }
+        throw new SyntaxException("Expected a type");
+    }
+
     private Expr expr() throws PLCException {
         IToken firstToken = t;
         if (isKind(KW_IF)) {
@@ -246,6 +283,47 @@ public class Parser implements IParser {
             return new ColorExpr(firstToken, red, green, blue);
         }
         throw new SyntaxException("Expected expression not in syntax");
+    }
+
+    private Statement statement() throws PLCException {
+        IToken firstToken = t;
+        if(isKind(IDENT)) {
+            String name = t.getText();
+            consume();
+            PixelSelector p = null;
+            if(isKind(LSQUARE)) {
+                p = pixelSelect();
+            }
+            if(isKind(ASSIGN)) { //Assignment statement
+                consume();
+                Expr e = expr();
+                return new AssignmentStatement(firstToken, name, p, e);
+            }
+            else if(isKind(LARROW)) { //Read statement
+                consume();
+                Expr e = expr();
+                return new ReadStatement(firstToken, name, p, e);
+            }
+            else {
+                throw new SyntaxException("Expected an = or <-");
+            }
+        }
+        else if(isKind(KW_WRITE)) {
+            consume();
+            Expr left = expr();
+            if(!isKind(RARROW)) {
+                throw new SyntaxException("Expected right arrow ->");
+            }
+            consume();
+            Expr right = expr();
+            return new WriteStatement(firstToken, left, right);
+        }
+        else if(isKind(RETURN)) {
+            consume();
+            Expr e = expr();
+            return new ReturnStatement(firstToken, e);
+        }
+        throw new SyntaxException("This is an invalid statement");
     }
 
     protected boolean isKind(Kind... kinds) {
