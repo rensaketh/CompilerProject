@@ -135,7 +135,7 @@ public class Parser implements IParser {
         IToken firstToken = t;
         Expr e = PrimaryExpr();
         if(isKind(LSQUARE)) {
-            IToken firstPixelToken = t;
+            /*IToken firstPixelToken = t;
             consume();
             Expr left = expr();
             if(!isKind(COMMA)) {
@@ -147,12 +147,45 @@ public class Parser implements IParser {
                 throw new SyntaxException("Expected right bracket");
             }
             consume();
-            PixelSelector p = new PixelSelector(firstPixelToken, left, right);
+            PixelSelector p = new PixelSelector(firstPixelToken, left, right);*/
+            PixelSelector p = pixelSelect();
             return new UnaryExprPostfix(firstToken, e, p);
         }
         else {
             return e;
         }
+    }
+
+    private PixelSelector pixelSelect() throws PLCException {
+        IToken firstPixelToken = t;
+        consume();
+        Expr left = expr();
+        if(!isKind(COMMA)) {
+            throw new SyntaxException("Expected comma");
+        }
+        consume();
+        Expr right = expr();
+        if(!isKind(RSQUARE)) {
+            throw new SyntaxException("Expected right bracket");
+        }
+        consume();
+        return new PixelSelector(firstPixelToken, left, right);
+    }
+
+    private Dimension dim() throws PLCException {
+        IToken firstDimToken = t;
+        consume();
+        Expr left = expr();
+        if(!isKind(COMMA)) {
+            throw new SyntaxException("Expected comma");
+        }
+        consume();
+        Expr right = expr();
+        if(!isKind(RSQUARE)) {
+            throw new SyntaxException("Expected right bracket");
+        }
+        consume();
+        return new Dimension(firstDimToken, left, right);
     }
 
     private Expr PrimaryExpr() throws PLCException {
@@ -177,7 +210,14 @@ public class Parser implements IParser {
             consume();
             return new IdentExpr(firstToken);
         }
-
+        else if(isKind(COLOR_CONST)) {
+            consume();
+            return new ColorConstExpr(firstToken);
+        }
+        else if(isKind(KW_CONSOLE)) {
+            consume();
+            return new ConsoleExpr(firstToken);
+        }
         if(isKind(LPAREN)) {
             consume();
             Expr e = expr();
@@ -186,6 +226,24 @@ public class Parser implements IParser {
             }
             consume();
             return e;
+        }
+        else if(isKind(LANGLE)) {
+            consume();
+            Expr red = expr();
+            if(!isKind(COMMA)) {
+                throw new SyntaxException("Expected comma");
+            }
+            consume();
+            Expr green = expr();
+            if(!isKind(COMMA)) {
+                throw new SyntaxException("Expected comma");
+            }
+            Expr blue = expr();
+            if(!isKind(RANGLE)) {
+                throw new SyntaxException("Expected right angle");
+            }
+            consume();
+            return new ColorExpr(firstToken, red, green, blue);
         }
         throw new SyntaxException("Expected expression not in syntax");
     }
