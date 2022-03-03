@@ -2,7 +2,6 @@ package edu.ufl.cise.plc;
 
 import edu.ufl.cise.plc.ast.*;
 import edu.ufl.cise.plc.IToken.*;
-import edu.ufl.cise.plc.ast.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,7 +12,12 @@ public class Parser implements IParser {
     @Override
     public ASTNode parse() throws PLCException {
         consume();
-        return program();
+        ASTNode prog = program();
+        if(!t.getKind().equals(EOF)) {
+            throw new SyntaxException("Trailing tokens at the end of the program", t.getSourceLocation());
+        }
+        return prog;
+        //return program();
         //return expr();
     }
 
@@ -26,54 +30,45 @@ public class Parser implements IParser {
         IToken firstToken = t;
         Types.Type returnType = null;
         if(!isKind(TYPE, KW_VOID)) {
-            throw new SyntaxException("Expected a type or void");
+            throw new SyntaxException("Expected a type or void", t.getSourceLocation());
         }
         returnType = Types.Type.toType(t.getText());
         consume();
         String name = null;
         if(!isKind(IDENT)) {
-            throw new SyntaxException("Expected an identifier");
+            throw new SyntaxException("Expected an identifier", t.getSourceLocation());
         }
         name = t.getText();
         consume();
         if(!isKind(LPAREN)) {
-            throw new SyntaxException("Expected a (");
+            throw new SyntaxException("Expected a (", t.getSourceLocation());
         }
         consume();
         List<NameDef> params = new ArrayList<>();
 
         if(isKind(TYPE)) {
-
             params.add(NameDefDec());
             while(isKind(COMMA)) {
-                IToken op = t;
                 consume();
                 params.add(NameDefDec());
-                //might need to add new NameDef, not sure
             }
         }
         if(!isKind(RPAREN)) {
-            throw new SyntaxException("Expected a )");
+            throw new SyntaxException("Expected a )", t.getSourceLocation());
         }
         consume();
-        Declaration d = null;
-        Statement s = null;
         List<ASTNode> decsAndStatements = new ArrayList<>();
         while(isKind(TYPE, IDENT, KW_WRITE, RETURN)) {
             if(isKind(TYPE)) { //Declaration
                 decsAndStatements.add(declaration());
-                if(!isKind(SEMI)) {
-                    throw new SyntaxException("Expected semicolon");
-                }
-                consume();
             }
             else { //Statement
                 decsAndStatements.add(statement());
-                if(!isKind(SEMI)) {
-                    throw new SyntaxException("Expected semicolon");
-                }
-                consume();
             }
+            if(!isKind(SEMI)) {
+                throw new SyntaxException("Expected semicolon", t.getSourceLocation());
+            }
+            consume();
         }
         return new Program(firstToken, returnType, name, params, decsAndStatements);
     }
@@ -105,15 +100,15 @@ public class Parser implements IParser {
             else if(isKind(LSQUARE)) {
                 Dimension d = dim();
                 if(!isKind(IDENT)) {
-                    throw new SyntaxException("Expected identifier");
+                    throw new SyntaxException("Expected identifier", t.getSourceLocation());
                 }
                 name = t.getText();
                 consume();
                 return new NameDefWithDim(firstToken, type, name, d);
             }
-            throw new SyntaxException("Invalid token after type");
+            throw new SyntaxException("Invalid token after type", t.getSourceLocation());
         }
-        throw new SyntaxException("Expected a type");
+        throw new SyntaxException("Expected a type", t.getSourceLocation());
     }
 
     private Expr expr() throws PLCException {
@@ -121,22 +116,22 @@ public class Parser implements IParser {
         if (isKind(KW_IF)) {
             consume();
             if(!isKind(LPAREN)) {
-                throw new SyntaxException("Expected left parentheses after if");
+                throw new SyntaxException("Expected left parentheses after if", t.getSourceLocation());
             }
             consume();
             Expr condition = expr();
             if(!isKind(RPAREN)) {
-                throw new SyntaxException("Expected right parentheses after condition");
+                throw new SyntaxException("Expected right parentheses after condition", t.getSourceLocation());
             }
             consume();
             Expr trueCase = expr();
             if(!isKind(KW_ELSE)) {
-                throw new SyntaxException("Expected else statement");
+                throw new SyntaxException("Expected else statement", t.getSourceLocation());
             }
             consume();
             Expr falseCase = expr();
             if(!isKind(KW_FI)) {
-                throw new SyntaxException("Expected fi statement");
+                throw new SyntaxException("Expected fi statement", t.getSourceLocation());
             }
             consume();
             return new ConditionalExpr(firstToken, condition, trueCase, falseCase);
@@ -231,19 +226,6 @@ public class Parser implements IParser {
         IToken firstToken = t;
         Expr e = PrimaryExpr();
         if(isKind(LSQUARE)) {
-            /*IToken firstPixelToken = t;
-            consume();
-            Expr left = expr();
-            if(!isKind(COMMA)) {
-                throw new SyntaxException("Expected comma");
-            }
-            consume();
-            Expr right = expr();
-            if(!isKind(RSQUARE)) {
-                throw new SyntaxException("Expected right bracket");
-            }
-            consume();
-            PixelSelector p = new PixelSelector(firstPixelToken, left, right);*/
             PixelSelector p = pixelSelect();
             return new UnaryExprPostfix(firstToken, e, p);
         }
@@ -257,12 +239,12 @@ public class Parser implements IParser {
         consume();
         Expr left = expr();
         if(!isKind(COMMA)) {
-            throw new SyntaxException("Expected comma");
+            throw new SyntaxException("Expected comma", t.getSourceLocation());
         }
         consume();
         Expr right = expr();
         if(!isKind(RSQUARE)) {
-            throw new SyntaxException("Expected right bracket");
+            throw new SyntaxException("Expected right bracket", t.getSourceLocation());
         }
         consume();
         return new PixelSelector(firstPixelToken, left, right);
@@ -273,12 +255,12 @@ public class Parser implements IParser {
         consume();
         Expr left = expr();
         if(!isKind(COMMA)) {
-            throw new SyntaxException("Expected comma");
+            throw new SyntaxException("Expected comma", t.getSourceLocation());
         }
         consume();
         Expr right = expr();
         if(!isKind(RSQUARE)) {
-            throw new SyntaxException("Expected right bracket");
+            throw new SyntaxException("Expected right bracket", t.getSourceLocation());
         }
         consume();
         return new Dimension(firstDimToken, left, right);
@@ -327,22 +309,22 @@ public class Parser implements IParser {
             consume();
             Expr red = expr();
             if(!isKind(COMMA)) {
-                throw new SyntaxException("Expected comma");
+                throw new SyntaxException("Expected comma", t.getSourceLocation());
             }
             consume();
             Expr green = expr();
             if(!isKind(COMMA)) {
-                throw new SyntaxException("Expected comma");
+                throw new SyntaxException("Expected comma", t.getSourceLocation());
             }
             consume();
             Expr blue = expr();
             if(!isKind(RANGLE)) {
-                throw new SyntaxException("Expected right angle");
+                throw new SyntaxException("Expected right angle", t.getSourceLocation());
             }
             consume();
             return new ColorExpr(firstToken, red, green, blue);
         }
-        throw new SyntaxException("Expected expression not in syntax");
+        throw new SyntaxException("Expected expression not in syntax", t.getSourceLocation());
     }
 
     private Statement statement() throws PLCException {
@@ -365,14 +347,14 @@ public class Parser implements IParser {
                 return new ReadStatement(firstToken, name, p, e);
             }
             else {
-                throw new SyntaxException("Expected an = or <-");
+                throw new SyntaxException("Expected an = or <-", t.getSourceLocation());
             }
         }
         else if(isKind(KW_WRITE)) {
             consume();
             Expr left = expr();
             if(!isKind(RARROW)) {
-                throw new SyntaxException("Expected right arrow ->");
+                throw new SyntaxException("Expected right arrow ->", t.getSourceLocation());
             }
             consume();
             Expr right = expr();
@@ -383,7 +365,7 @@ public class Parser implements IParser {
             Expr e = expr();
             return new ReturnStatement(firstToken, e);
         }
-        throw new SyntaxException("This is an invalid statement");
+        throw new SyntaxException("This is an invalid statement", t.getSourceLocation());
     }
 
     protected boolean isKind(Kind... kinds) {
@@ -399,8 +381,8 @@ public class Parser implements IParser {
         listOfTokens.add(t);
     }
 
-    private ILexer lexer;
+    private final ILexer lexer;
     private IToken t;
-    private String input;
+    private final String input;
     private ArrayList<IToken> listOfTokens = new ArrayList<>();
 }
