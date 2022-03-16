@@ -1481,9 +1481,22 @@ class Assignment3StarterTest {
 		assertEquals(1, ((IntLitExpr)((ColorExpr) var1).getRed()).getValue());
 		assertEquals("BLUEISH", ((StringLitExpr)((ColorExpr) var1).getGreen()).getValue());
 		assertEquals(false, ((BooleanLitExpr)((ColorExpr) var1).getBlue()).getValue());
-
-
 	}
 
+	@DisplayName("programStructureFucked1")
+	@Test
+	public void pSF1(TestInfo testInfo) throws Exception {
+		String input = """
+        void foo(,int a)
+        int b = a;
+        """;
+		show("-------------");
+		show(input);
+		Exception e = assertThrows(SyntaxException.class, () -> {
+			@SuppressWarnings("unused")
+			ASTNode ast = getAST(input);
+		});
+		show("Expected syntax exception: " + e);
+	}
 
 }
