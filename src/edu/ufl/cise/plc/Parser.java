@@ -11,6 +11,7 @@ import static edu.ufl.cise.plc.IToken.Kind.*;
 public class Parser implements IParser {
     @Override
     public ASTNode parse() throws PLCException {
+
         consume();
         ASTNode prog = program();
         if(!t.getKind().equals(EOF)) {
