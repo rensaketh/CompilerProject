@@ -232,7 +232,8 @@ public class TypeCheckVisitor implements ASTVisitor {
 		//check(dec.isInitialized(), identExpr, "using uninitialized variable");
 		identExpr.setDec(dec);
 
-		Type type = (Type) dec.visit(this, arg);
+		Type type = dec.getType();
+		//Type type = (Type) dec.visit(this, arg);
 		identExpr.setType(type);
 		return type;
 		//throw new UnsupportedOperationException("Unimplemented visit method.");
@@ -283,6 +284,7 @@ public class TypeCheckVisitor implements ASTVisitor {
 		target.setInitialized(true);
 		Expr expression = assignmentStatement.getExpr();
 		Type expressionType = (Type) expression.visit(this, arg);
+		//assignmentStatement.setTargetDec(target);
 		if(targetType != IMAGE) {
 			check(assignmentStatement.getSelector() == null, assignmentStatement, "there should not be a pixel selector");
 			if(targetType != expressionType) {
@@ -367,7 +369,7 @@ public class TypeCheckVisitor implements ASTVisitor {
 		Expr initializer = declaration.getExpr();
 		if (initializer != null) {
 			Type initializerType = (Type) initializer.visit(this,arg); //create function for assignment compatible assignment statements
-			check(assignmentCompatible((Type) declaration.visit(this, arg), initializerType),declaration,
+			check(assignmentCompatible((Type) declaration.getType(), initializerType),declaration,
 					"type of expression and declared type do not match");
 			declaration.setInitialized(true);
 		}
