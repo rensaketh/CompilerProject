@@ -271,7 +271,10 @@ public class TypeCheckVisitor implements ASTVisitor {
 		check(declaration != null, assignmentStatement, "undeclared variable " + name);
 		Type targetType = declaration.getType();
 		Expr expression = assignmentStatement.getExpr();
-		Type expressionType= (Type) expression.visit(this, arg);
+		Type expressionType = null;
+		if(assignmentStatement.getSelector()==null){
+			expressionType = (Type) assignmentStatement.getExpr().visit(this, arg);
+		}
 
 		assignmentStatement.setTargetDec(declaration);
 
@@ -319,14 +322,28 @@ public class TypeCheckVisitor implements ASTVisitor {
 			String varX = assignmentStatement.getSelector().getX().getText();
 			String varY = assignmentStatement.getSelector().getY().getText();
 
-			boolean insertedX = symbolTable.insert(varX,null);
-			check(insertedX, declaration, "variable " + varX + " already declared");
+			if(assignmentStatement.getSelector().getX().getClass() != IdentExpr.class || assignmentStatement.getSelector().getY().getClass() != IdentExpr.class) {
+				throw new TypeCheckException("expected ident expressions", assignmentStatement.getSourceLoc());
+			}
 
-			boolean insertedY = symbolTable.insert(varY,null);
-			check(insertedY, declaration, "variable " + varY + " already declared");
+			boolean insertedX = symbolTable.insert(varX, new VarDeclaration(null, new NameDef(null, "int", varX), null, assignmentStatement.getSelector().getX()));
+			check(insertedX, assignmentStatement.getSelector().getX(), "variable " + varX + " already declared");
+
+			boolean insertedY = symbolTable.insert(varY, new VarDeclaration(null, new NameDef(null, "int", varY), null, assignmentStatement.getSelector().getY()));
+			check(insertedY, assignmentStatement.getSelector().getY(), "variable " + varY + " already declared");
+
 
 			assignmentStatement.getSelector().getX().setType(INT);
 			assignmentStatement.getSelector().getY().setType(INT);
+
+			symbolTable.lookup(varX).setInitialized(true);
+			symbolTable.lookup(varY).setInitialized(true);
+
+			//symbolTable.lookup(varX).visit(this, arg);
+			//symbolTable.lookup(varY).visit(this, arg);
+
+
+			expressionType = (Type) expression.visit(this, arg);
 
 			if(expressionType == COLOR || expressionType == COLORFLOAT || expressionType == FLOAT || expressionType == INT) {
 				assignmentStatement.getExpr().setCoerceTo(COLOR);
@@ -334,6 +351,9 @@ public class TypeCheckVisitor implements ASTVisitor {
 			else {
 				throw new TypeCheckException("expression and target variable are not assignment compatible", assignmentStatement.getSourceLoc());
 			}
+
+			symbolTable.remove(varX);
+			symbolTable.remove(varY);
 		}
 
 		declaration.setInitialized(true);
@@ -439,7 +459,7 @@ public class TypeCheckVisitor implements ASTVisitor {
 		}
 		else if(declaration.getDim() != null) {
 			Type dimType = (Type) declaration.getDim().visit(this, arg);
-			check(dimType == INT, declaration, "expected int for type of dimension");
+			check(dimType == INT, declaration.getDim(), "expected int for type of dimension");
 			//return null;
 		}
 		else {
