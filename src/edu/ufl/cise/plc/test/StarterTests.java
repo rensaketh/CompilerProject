@@ -1015,4 +1015,48 @@ class StarterTests {
 		show(ast);
 	}
 
+	@DisplayName("test34")
+	@Test
+	public void test34(TestInfo testInfo) throws Exception{
+		String input = """
+	                    color BDP1(int size)
+	   			          int Z = 255;
+	   			          image[size,size] a;
+	   			          a[x,y] = <<(x/8*y/8)%(Z+1), 0, 0>>;
+	   			          int b = getRed a[size/2, size/2];
+	   				    ^ BLUE * b;
+                        """;
+		show("-------------");
+		show(testInfo.getDisplayName());
+		show(input);
+		ASTNode ast = getAST(input);
+		checkTypes(ast);
+		List<ASTNode> decsAndStatements = ((Program) ast).getDecsAndStatements();
+		VarDeclaration var0 = (VarDeclaration) decsAndStatements.get(0);
+		assertEquals(Type.INT, var0.getType());
+		assertThat("", var0.getExpr(), instanceOf(IntLitExpr.class));
+		assertEquals(255, var0.getExpr().getFirstToken().getIntValue());
+		AssignmentStatement var1 = (AssignmentStatement) decsAndStatements.get(2);
+		assertEquals(Type.INT, var1.getSelector().getX().getType());
+		assertEquals(Type.INT, var1.getSelector().getY().getType());
+		Expr var2 = var1.getExpr();
+		assertThat("", var2, instanceOf(ColorExpr.class));
+		Expr var3 = ((ColorExpr) var2).getRed();
+		assertThat("", var3, instanceOf(BinaryExpr.class));
+		assertEquals(Type.INT, var3.getType());
+		VarDeclaration var4 = (VarDeclaration) decsAndStatements.get(3);
+		assertThat("", var4.getExpr(), instanceOf(UnaryExpr.class));
+		UnaryExpr var5 = (UnaryExpr) var4.getExpr();
+		assertEquals("getRed", var5.getOp().getText());
+		assertThat("", var5.getExpr(), instanceOf(UnaryExprPostfix.class));
+		ReturnStatement var6 = (ReturnStatement) decsAndStatements.get(4);
+		assertEquals(Type.COLOR, var6.getExpr().getType());
+		BinaryExpr var7 = (BinaryExpr) var6.getExpr();
+		assertEquals(Type.COLOR, var7.getLeft().getType());
+		assertEquals(Type.INT, var7.getRight().getType());
+		assertEquals(Type.COLOR, var7.getRight().getCoerceTo());
+		show(ast);
+	}
+
+
 }
