@@ -14,4 +14,8 @@ public class SymbolTable {
     public Declaration lookup(String name) {
         return entries.get(name);
     }
+
+    public boolean remove(String name) {
+        return (entries.remove(name) != null);
+    }
 }

@@ -21,6 +21,20 @@ public class TypeCheckVisitor implements ASTVisitor {
 			throw new TypeCheckException(message, node.getSourceLoc());
 		}
 	}
+
+	private boolean assignmentCompatible(Type targetType, Type rhsType) {
+		return (targetType == rhsType
+				|| targetType==Type.INT && rhsType== FLOAT
+				|| targetType== FLOAT && rhsType== INT
+				|| targetType== INT && rhsType== COLOR
+				|| targetType== COLOR && rhsType== INT
+				|| targetType== IMAGE && rhsType== INT
+				|| targetType== IMAGE && rhsType== FLOAT
+				|| targetType== IMAGE && rhsType== COLOR
+				|| targetType== IMAGE && rhsType== COLORFLOAT
+				|| targetType== COLOR && rhsType== INT
+		);
+	}
 	
 	//The type of a BooleanLitExpr is always BOOLEAN.  
 	//Set the type in AST Node for later passes (code generation)
@@ -109,57 +123,6 @@ public class TypeCheckVisitor implements ASTVisitor {
 		//return the type for convenience in this visitor.
 		return resultType;
 	}
-
-	Map<Pair<Type,Type>, Type> binaryPlusMinusExprs = Map.of(
-			new Pair<Type,Type>(INT, INT), INT,
-			new Pair<Type,Type>(FLOAT, FLOAT), FLOAT,
-			new Pair<Type,Type>(INT, FLOAT), FLOAT,
-			new Pair<Type,Type>(FLOAT, INT), FLOAT,
-			new Pair<Type,Type>(COLOR, COLOR), COLOR,
-			new Pair<Type,Type>(COLORFLOAT, COLORFLOAT), COLORFLOAT,
-			new Pair<Type,Type>(COLORFLOAT, COLOR), COLORFLOAT,
-			new Pair<Type,Type>(COLOR, COLORFLOAT), COLORFLOAT,
-			new Pair<Type,Type>(IMAGE, IMAGE), IMAGE
-	);
-
-	Map<Pair<Type,Type>, Type> binaryTimesDivModExprs = Map.of(
-			new Pair<Type,Type>(IMAGE, INT), IMAGE,
-			new Pair<Type,Type>(IMAGE, FLOAT), IMAGE,
-			new Pair<Type,Type>(INT, COLOR), COLOR,
-			new Pair<Type,Type>(FLOAT, COLOR), COLOR,
-			new Pair<Type,Type>(FLOAT, COLOR), COLORFLOAT,
-			new Pair<Type,Type>(COLOR, FLOAT), COLORFLOAT
-	);
-
-	Map<Pair<Type,Type>, Type> binaryComparisonExprs = Map.of(
-			new Pair<Type,Type>(INT,INT), BOOLEAN,
-			new Pair<Type,Type>(FLOAT, INT), BOOLEAN,
-			new Pair<Type,Type>(INT, FLOAT), BOOLEAN,
-			new Pair<Type,Type>(FLOAT, INT), BOOLEAN
-	);
-
-	/*Map<Pair<Type,Type>, Type> binaryExprs = Map.of(
-			new Pair<Type,Type>(BOOLEAN,BOOLEAN), BOOLEAN,
-			new Pair<Type,Type>(INT, INT), INT,
-			new Pair<Type,Type>(FLOAT, FLOAT), FLOAT,
-			new Pair<Type,Type>(INT, FLOAT), FLOAT,
-			new Pair<Type,Type>(FLOAT, INT), FLOAT,
-			new Pair<Type,Type>(COLOR, COLOR), COLOR,
-			new Pair<Type,Type>(COLORFLOAT, COLORFLOAT), COLORFLOAT,
-			//new Pair<Type,Type>(COLORFLOAT, COLOR), COLORFLOAT,
-			//new Pair<Type,Type>(COLOR, COLORFLOAT), COLORFLOAT,
-			new Pair<Type,Type>(IMAGE, IMAGE), IMAGE, //fine
-			new Pair<Type,Type>(IMAGE, INT), IMAGE,
-			new Pair<Type,Type>(IMAGE, FLOAT), IMAGE,
-			new Pair<Type,Type>(INT, COLOR), COLOR
-			/*new Pair<Type,Type>(FLOAT, COLOR), COLOR,
-			new Pair<Type,Type>(FLOAT, COLOR), COLORFLOAT,
-			new Pair<Type,Type>(COLOR, FLOAT), COLORFLOAT,
-			//new Pair<Type,Type>(INT,INT), BOOLEAN,
-			//new Pair<Type,Type>(FLOAT, INT), BOOLEAN,
-			//new Pair<Type,Type>(INT, FLOAT), BOOLEAN,
-			//new Pair<Type,Type>(FLOAT, INT), BOOLEAN,
-			);*/
 
 	//This method has several cases. Work incrementally and test as you go. 
 	@Override
@@ -266,10 +229,10 @@ public class TypeCheckVisitor implements ASTVisitor {
 		Declaration dec = symbolTable.lookup(name);
 
 		check(dec != null, identExpr, "unidentified identifier " + name);
-		check(dec.isInitialized(), identExpr, "using uninitialized variable");
+		//check(dec.isInitialized(), identExpr, "using uninitialized variable");
 		identExpr.setDec(dec);
 
-		Type type = dec.getType();
+		Type type = (Type) dec.visit(this, arg);
 		identExpr.setType(type);
 		return type;
 		//throw new UnsupportedOperationException("Unimplemented visit method.");
@@ -278,10 +241,10 @@ public class TypeCheckVisitor implements ASTVisitor {
 	@Override
 	public Object visitConditionalExpr(ConditionalExpr conditionalExpr, Object arg) throws Exception {
 		//TODO  implement this method
-		Type conditionType = conditionalExpr.getCondition().getType();
+		Type conditionType = (Type) conditionalExpr.getCondition().visit(this, arg);
 		check(conditionType == BOOLEAN, conditionalExpr, "conditional type not a boolean");
-		Type trueCase = conditionalExpr.getTrueCase().getType();
-		Type falseCase = conditionalExpr.getFalseCase().getType();
+		Type trueCase = (Type) conditionalExpr.getTrueCase().visit(this, arg);
+		Type falseCase = (Type) conditionalExpr.getFalseCase().visit(this, arg);
 		check(trueCase == falseCase, conditionalExpr, "true case and false case have different types");
 		conditionalExpr.setType(trueCase);
 		return trueCase;
@@ -291,7 +254,11 @@ public class TypeCheckVisitor implements ASTVisitor {
 	@Override
 	public Object visitDimension(Dimension dimension, Object arg) throws Exception {
 		//TODO  implement this method
-		throw new UnsupportedOperationException();
+		Type heightType = (Type) dimension.getHeight().visit(this, arg);
+		Type widthType = (Type) dimension.getWidth().visit(this, arg);
+		check(heightType == INT && widthType == INT, dimension, "height and width have to be int types");
+		return dimension;
+		//throw new UnsupportedOperationException();
 	}
 
 	@Override
@@ -312,22 +279,23 @@ public class TypeCheckVisitor implements ASTVisitor {
 	public Object visitAssignmentStatement(AssignmentStatement assignmentStatement, Object arg) throws Exception {
 		//TODO:  implement this method
 		Declaration target = symbolTable.lookup(assignmentStatement.getName());
-		Type targetType = target.getType();
+		Type targetType = (Type) target.visit(this, arg);
 		target.setInitialized(true);
 		Expr expression = assignmentStatement.getExpr();
+		Type expressionType = (Type) expression.visit(this, arg);
 		if(targetType != IMAGE) {
 			check(assignmentStatement.getSelector() == null, assignmentStatement, "there should not be a pixel selector");
-			if(targetType != expression.getType()) {
-				if(targetType == INT && expression.getType() == FLOAT) {
+			if(targetType != expressionType) {
+				if(targetType == INT && expressionType == FLOAT) {
 					expression.setCoerceTo(INT);
 				}
-				else if(targetType == FLOAT && expression.getType() == INT) {
+				else if(targetType == FLOAT && expressionType == INT) {
 					expression.setCoerceTo(FLOAT);
 				}
-				else if(targetType == INT && expression.getType() == COLOR) {
+				else if(targetType == INT && expressionType == COLOR) {
 					expression.setCoerceTo(INT);
 				}
-				else if(targetType == COLOR && expression.getType() == INT) {
+				else if(targetType == COLOR && expressionType == INT) {
 					expression.setCoerceTo(COLOR);
 				}
 				else {
@@ -335,8 +303,32 @@ public class TypeCheckVisitor implements ASTVisitor {
 				}
 			}
 		}
+		else if(targetType == IMAGE && assignmentStatement.getSelector() == null) {
+			if(targetType != expressionType) {
+				if(targetType == IMAGE && expressionType == INT) {
+					expression.setCoerceTo(COLOR);
+				}
+				else if(targetType == IMAGE && expressionType == FLOAT) {
+					expression.setCoerceTo(COLORFLOAT);
+				}
+				else if(targetType == IMAGE && expressionType == COLOR) {
+					//expression.setCoerceTo(INT);
+				}
+				else if(targetType == IMAGE && expressionType == COLORFLOAT) {
+					//expression.setCoerceTo(COLOR);
+				}
+				else {
+					throw new TypeCheckException("expression and target variable are not assignment compatible", assignmentStatement.getSourceLoc());
+				}
+			}
+		}
 		else if(targetType == IMAGE && assignmentStatement.getSelector() != null) {
+			PixelSelector p = assignmentStatement.getSelector();
+			boolean inserted = symbolTable.insert(p.getX().getText(),null);
+			check(inserted, p, "variable " + p.getX().getText() + "already declared");
 
+			inserted = symbolTable.insert(p.getY().getText(),null);
+			check(inserted, p, "variable " + p.getY().getText() + "already declared");
 		}
 		throw new UnsupportedOperationException("Unimplemented visit method.");
 	}
@@ -358,20 +350,30 @@ public class TypeCheckVisitor implements ASTVisitor {
 		String lhsVar = readStatement.getName();
 		Declaration target = symbolTable.lookup(lhsVar);
 		check(readStatement.getSelector() == null, readStatement, "cannot have a pixel selector");
-		Type rhsType = readStatement.getSource().getType();
+		Type rhsType = (Type) readStatement.getSource().visit(this, arg);
 		check(rhsType == CONSOLE || rhsType == STRING, readStatement, "must have a console or string as a source");
 		symbolTable.lookup(lhsVar).setInitialized(true);
 		readStatement.setTargetDec(target);
-		return target;
+		return null;
 		//throw new UnsupportedOperationException("Unimplemented visit method.");
 	}
 
 	@Override
 	public Object visitVarDeclaration(VarDeclaration declaration, Object arg) throws Exception {
 		//TODO:  implement this method
-		throw new UnsupportedOperationException("Unimplemented visit method.");
+		String name = declaration.getName();
+		boolean inserted = symbolTable.insert(name,declaration);
+		check(inserted, declaration, "variable " + name + "already declared");
+		Expr initializer = declaration.getExpr();
+		if (initializer != null) {
+			Type initializerType = (Type) initializer.visit(this,arg); //create function for assignment compatible assignment statements
+			check(assignmentCompatible((Type) declaration.visit(this, arg), initializerType),declaration,
+					"type of expression and declared type do not match");
+			declaration.setInitialized(true);
+		}
+		return null;
+		//throw new UnsupportedOperationException("Unimplemented visit method.");
 	}
-
 
 	@Override
 	public Object visitProgram(Program program, Object arg) throws Exception {		
@@ -379,6 +381,14 @@ public class TypeCheckVisitor implements ASTVisitor {
 		
 		//Save root of AST so return type can be accessed in return statements
 		root = program;
+		String name = program.getName();
+		boolean inserted = symbolTable.insert(name,null);
+		check(inserted, program, "program name " + name + "already declared");
+		List<NameDef> params = program.getParams();
+
+		for (NameDef param : params) {
+			param.visit(this, arg);
+		}
 		
 		//Check declarations and statements
 		List<ASTNode> decsAndStatements = program.getDecsAndStatements();
@@ -391,13 +401,25 @@ public class TypeCheckVisitor implements ASTVisitor {
 	@Override
 	public Object visitNameDef(NameDef nameDef, Object arg) throws Exception {
 		//TODO:  implement this method
-		throw new UnsupportedOperationException();
+		String name = nameDef.getName();
+		boolean inserted = symbolTable.insert(name,nameDef);
+		check(inserted, nameDef, "variable " + name + "already declared");
+		return null;
+		//throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public Object visitNameDefWithDim(NameDefWithDim nameDefWithDim, Object arg) throws Exception {
 		//TODO:  implement this method
-		throw new UnsupportedOperationException();
+		Dimension dim = nameDefWithDim.getDim();
+		Type dimType = (Type) dim.visit(this, arg);
+		check(dimType == INT, nameDefWithDim, "dimension type has to be int");
+
+		String name = nameDefWithDim.getName();
+		boolean inserted = symbolTable.insert(name,nameDefWithDim);
+		check(inserted, nameDefWithDim, "variable " + name + "already declared");
+		return null;
+		//throw new UnsupportedOperationException();
 	}
  
 	@Override
