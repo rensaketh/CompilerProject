@@ -339,10 +339,6 @@ public class TypeCheckVisitor implements ASTVisitor {
 			symbolTable.lookup(varX).setInitialized(true);
 			symbolTable.lookup(varY).setInitialized(true);
 
-			//symbolTable.lookup(varX).visit(this, arg);
-			//symbolTable.lookup(varY).visit(this, arg);
-
-
 			expressionType = (Type) expression.visit(this, arg);
 
 			if(expressionType == COLOR || expressionType == COLORFLOAT || expressionType == FLOAT || expressionType == INT) {
@@ -424,6 +420,10 @@ public class TypeCheckVisitor implements ASTVisitor {
 		Type rhsType = (Type) readStatement.getSource().visit(this, arg);
 		check(rhsType == CONSOLE || rhsType == STRING, readStatement, "must have a console or string as a source");
 		symbolTable.lookup(lhsVar).setInitialized(true);
+
+		if(rhsType == CONSOLE) {
+			readStatement.getSource().setCoerceTo(target.getType());
+		}
 		readStatement.setTargetDec(target);
 		return null;
 		//throw new UnsupportedOperationException("Unimplemented visit method.");
@@ -462,9 +462,12 @@ public class TypeCheckVisitor implements ASTVisitor {
 			check(dimType == INT, declaration.getDim(), "expected int for type of dimension");
 			//return null;
 		}
-		else {
-			throw new TypeCheckException("variable not initialized", declaration.getSourceLoc());
+		else if(declaration.getType() == IMAGE) {
+			throw new TypeCheckException("image not initialized", declaration.getSourceLoc());
 		}
+		/*else {
+			throw new TypeCheckException("variable not initialized", declaration.getSourceLoc());
+		}*/
 		return null;
 
 		//throw new UnsupportedOperationException("Unimplemented visit method.");
