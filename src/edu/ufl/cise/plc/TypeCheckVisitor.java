@@ -454,6 +454,9 @@ public class TypeCheckVisitor implements ASTVisitor {
 				Type targetType = declaration.getNameDef().getType();
 				Type rhsType = declaration.getExpr().getType();
 				check(rhsType == CONSOLE || rhsType == STRING, declaration, "must have a console or string as a source");
+				if(rhsType == CONSOLE) {
+					declaration.getExpr().setCoerceTo(targetType);
+				}
 			}
 			declaration.setInitialized(true);
 		}

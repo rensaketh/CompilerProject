@@ -1,3 +1,4 @@
+
 package edu.ufl.cise.plc.runtime;
 
 import javax.swing.*;
@@ -12,26 +13,32 @@ import static javax.swing.WindowConstants.EXIT_ON_CLOSE;
 
 public class ConsoleIO {
 
-	/**
+
+/**
 	 * Destination of "console" output. Can be changed to redirect output. Generated
 	 * code should use ConsoleIO.console.println(...) etc. instead of System.out.println
 	 */
+
 	public static PrintStream console = System.out;
 	
 	public void setConsole(PrintStream out) {
 		console = out;
 	}
 
-	/** Source of "console" input. */
+
+/** Source of "console" input. */
+
 	static InputStream consoleInput = System.in;
 	
 	public void setConsoleInput(InputStream in) {
 		consoleInput = in;
 	}
 
-	/*
+
+/*
 	 * java.util.Scanner for input from "console" Implementation is a singleton.
 	 */
+
 	private static Scanner scanner;
 
 	private static Scanner getScanner() {
@@ -41,7 +48,8 @@ public class ConsoleIO {
 		return scanner;
 	}
 
-	/**
+
+/**
 	 * Reads a value of the given type from the console. The type must be one of
 	 * "INT", "FLOAT", "STRING", or "COLOR". If the scanner cannot convert the input
 	 * token to the expected type, it will print "INVALID INPUT" and read another
@@ -53,6 +61,7 @@ public class ConsoleIO {
 	 * @param prompt prompt to user for value
 	 * @return
 	 */
+
 	public static Object readValueFromConsole(String type, String prompt) {
 		console.print(prompt);
 		Scanner scanner = getScanner();
@@ -61,12 +70,12 @@ public class ConsoleIO {
 			case "INT" -> scanner.nextInt();
 			case "FLOAT" -> scanner.nextFloat();
 			case "STRING" -> scanner.nextLine();
-			case "COLOR" -> {
+			/*case "COLOR" -> {
 				int r = scanner.nextInt();
 				int g = scanner.nextInt();
 				int b = scanner.nextInt();
 				yield new ColorTuple(r, g, b);
-			}
+			}*/
 			case "BOOLEAN" -> scanner.nextBoolean();
 			default -> throw new IllegalArgumentException("Compiler bug Unexpected value: " + type);
 			};
@@ -77,11 +86,12 @@ public class ConsoleIO {
 		}
 	}
 
-	/**
+/**
 	 * Displays the given image on the screen.
-	 * 
+	 *
 	 * @param image
 	 */
+
 	public static void displayImageOnScreen(BufferedImage image) {
 		System.err.println("in displayImageOnScreen: image = " + image);
 		JFrame frame = new JFrame();
@@ -106,3 +116,4 @@ public class ConsoleIO {
 	
 
 }
+
