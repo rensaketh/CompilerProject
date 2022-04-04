@@ -1,7 +1,7 @@
 package edu.ufl.cise.plc;
 
 public class CodeGenStringBuilder {
-    StringBuilder delegate;
+    StringBuilder delegate = new StringBuilder();
     //methods reimplemented—just call the delegates method
     public CodeGenStringBuilder append(String s){
         delegate.append(s);

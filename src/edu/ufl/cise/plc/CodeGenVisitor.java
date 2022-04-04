@@ -13,9 +13,27 @@ public class CodeGenVisitor implements ASTVisitor {
 
     private String convertTypeToCast(Types.Type type) {
         if(type == Types.Type.INT) {
-            return null;
+            return "(Integer) ";
+        }
+        else if(type == Types.Type.STRING) {
+            return "(String) ";
+        }
+        else if(type == Types.Type.BOOLEAN) {
+            return "(Boolean) ";
+        }
+        else if(type == Types.Type.FLOAT) {
+            return "(Float) ";
         }
         return null;
+    }
+
+    private String convertTypeToString(Types.Type type) {
+        if(type == Types.Type.STRING) {
+            return "String";
+        }
+        else {
+            return type.toString().toLowerCase();
+        }
     }
 
     @Override
@@ -39,11 +57,21 @@ public class CodeGenVisitor implements ASTVisitor {
 
     @Override
     public Object visitIntLitExpr(IntLitExpr intLitExpr, Object arg) throws Exception {
-        return null;
+        CodeGenStringBuilder sb = (CodeGenStringBuilder) arg;
+        if(intLitExpr.getCoerceTo() != null && intLitExpr.getCoerceTo() != Types.Type.INT) {
+            sb.append(convertTypeToCast(intLitExpr.getCoerceTo()));
+        }
+        sb.append(Integer.toString(intLitExpr.getValue()));
+        return sb;
     }
 
     @Override
     public Object visitFloatLitExpr(FloatLitExpr floatLitExpr, Object arg) throws Exception {
+        CodeGenStringBuilder sb = (CodeGenStringBuilder) arg;
+        if(floatLitExpr.getCoerceTo() != null && floatLitExpr.getCoerceTo() != Types.Type.FLOAT) {
+            sb.append(convertTypeToCast(floatLitExpr.getCoerceTo()));
+        }
+        sb.append(Float.toString(floatLitExpr.getValue()) + "f");
         return null;
     }
 
@@ -54,7 +82,33 @@ public class CodeGenVisitor implements ASTVisitor {
 
     @Override
     public Object visitConsoleExpr(ConsoleExpr consoleExpr, Object arg) throws Exception {
-        return null;
+        CodeGenStringBuilder sb = (CodeGenStringBuilder) arg;
+        Types.Type type = consoleExpr.getCoerceTo();
+        sb.append(convertTypeToCast(consoleExpr.getCoerceTo()));
+        sb.append("ConsoleIO.readValueFromConsole(");
+
+        String prompt = "\"Enter ";
+
+        if(type == Types.Type.INT) {
+            sb.append("\"INT\"");
+            prompt += "integer:\"";
+        }
+        else if(type == Types.Type.STRING) {
+            sb.append("\"STRING\"");
+            prompt += "string:\"";
+        }
+        else if(type == Types.Type.BOOLEAN) {
+            sb.append("\"BOOLEAN\"");
+            prompt += "boolean:\"";
+        }
+        else if(type == Types.Type.FLOAT) {
+            sb.append("\"FLOAT\"");
+            prompt += "float:\"";
+        }
+        sb.comma();
+        sb.append(prompt);
+        sb.rparen();
+        return sb;
     }
 
     @Override
@@ -64,7 +118,16 @@ public class CodeGenVisitor implements ASTVisitor {
 
     @Override
     public Object visitUnaryExpr(UnaryExpr unaryExpression, Object arg) throws Exception {
-        return null;
+        if(unaryExpression.getOp().getKind() == IToken.Kind.BANG || unaryExpression.getOp().getKind() == IToken.Kind.MINUS) {
+            CodeGenStringBuilder sb = (CodeGenStringBuilder) arg;
+            sb.lparen();
+            sb.append(unaryExpression.getOp().getText());
+            Expr expr = unaryExpression.getExpr();
+            expr.visit(this, sb);
+            sb.rparen();
+            return sb;
+        }
+        throw new UnsupportedOperationException("Currently only supporting - and !");
     }
 
     @Override
@@ -83,7 +146,12 @@ public class CodeGenVisitor implements ASTVisitor {
 
     @Override
     public Object visitIdentExpr(IdentExpr identExpr, Object arg) throws Exception {
-        return null;
+        CodeGenStringBuilder sb = (CodeGenStringBuilder) arg;
+        if(identExpr.getCoerceTo() != null && identExpr.getCoerceTo() != identExpr.getType()) {
+            sb.append(convertTypeToCast(identExpr.getCoerceTo()));
+        }
+        sb.append(identExpr.getText());
+        return sb;
     }
 
     @Override
@@ -125,8 +193,11 @@ public class CodeGenVisitor implements ASTVisitor {
 
     @Override
     public Object visitWriteStatement(WriteStatement writeStatement, Object arg) throws Exception { //TODO:Check
-        ConsoleIO.console.println(writeStatement.getSource().visit(this, arg));
-        return null;
+        CodeGenStringBuilder sb = (CodeGenStringBuilder) arg;
+        sb.append("ConsoleIO.console.println").lparen();
+        writeStatement.getSource().visit(this, sb);
+        sb.rparen().semi().newline();
+        return sb;
     }
 
     @Override
@@ -145,13 +216,15 @@ public class CodeGenVisitor implements ASTVisitor {
     @Override
     public Object visitProgram(Program program, Object arg) throws Exception {
         CodeGenStringBuilder sb = new CodeGenStringBuilder();
-        sb.append("package " + packageName).newline();
+        sb.append("package " + packageName).semi().newline();
         //imports
+
+        sb.append("import edu.ufl.cise.plc.runtime.*").semi().newline();
         sb.append("public class " + program.getName() + " {").newline();
-        sb.append("\tpublic static " + program.getReturnType().toString() + " apply").lparen();
+        sb.append("\tpublic static " + convertTypeToString(program.getReturnType()) + " apply").lparen();
         //StringBuilder paramList = new StringBuilder();
         for(int i = 0; i < program.getParams().size(); i++) {
-            String param = (String) program.getParams().get(i).visit(this, sb);
+            program.getParams().get(i).visit(this, sb);
             //paramList.append(param);
             if(i != program.getParams().size() - 1) {
                 sb.append(", ");
@@ -164,13 +237,13 @@ public class CodeGenVisitor implements ASTVisitor {
             decsStatements.visit(this, sb);
         }
         sb.append("\t}\n}");
-        return sb;
+        return sb.delegate.toString();
     }
 
     @Override
     public Object visitNameDef(NameDef nameDef, Object arg) throws Exception {
         CodeGenStringBuilder sb = (CodeGenStringBuilder) arg;
-        sb.append(nameDef.getType().toString() + " " + nameDef.getName());
+        sb.append(convertTypeToString(nameDef.getType()) + " " + nameDef.getName());
         return sb;
     }
 
@@ -192,7 +265,18 @@ public class CodeGenVisitor implements ASTVisitor {
 
     @Override
     public Object visitVarDeclaration(VarDeclaration declaration, Object arg) throws Exception {
-        return null;
+        CodeGenStringBuilder sb = (CodeGenStringBuilder) arg;
+        declaration.getNameDef().visit(this, sb);
+        if(declaration.getOp() != null && (declaration.getOp().getKind() == IToken.Kind.ASSIGN || declaration.getOp().getKind() == IToken.Kind.LARROW)) {
+            sb.append(" = ");
+            if (declaration.getOp().getKind() == IToken.Kind.LARROW && declaration.getExpr().getType() != Types.Type.CONSOLE) {
+                throw new UnsupportedOperationException("Expected console for this part of the assignment");
+            }
+            Expr expr = declaration.getExpr();
+            expr.visit(this, sb);
+        }
+        sb.semi().newline();
+        return sb;
     }
 
     @Override
