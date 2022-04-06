@@ -13,6 +13,22 @@ public class CodeGenVisitor implements ASTVisitor {
 
     private String convertTypeToCast(Types.Type type) {
         if(type == Types.Type.INT) {
+            return "(int) ";
+        }
+        else if(type == Types.Type.STRING) {
+            return "(String) ";
+        }
+        else if(type == Types.Type.BOOLEAN) {
+            return "(boolean) ";
+        }
+        else if(type == Types.Type.FLOAT) {
+            return "(float) ";
+        }
+        return null;
+    }
+
+    private String convertTypeToBoxed(Types.Type type) {
+        if(type == Types.Type.INT) {
             return "(Integer) ";
         }
         else if(type == Types.Type.STRING) {
@@ -22,7 +38,7 @@ public class CodeGenVisitor implements ASTVisitor {
             return "(Boolean) ";
         }
         else if(type == Types.Type.FLOAT) {
-            return "(Float) ";
+            return "(float) ";
         }
         return null;
     }
@@ -51,7 +67,7 @@ public class CodeGenVisitor implements ASTVisitor {
     @Override
     public Object visitStringLitExpr(StringLitExpr stringLitExpr, Object arg) throws Exception {
         CodeGenStringBuilder sb = (CodeGenStringBuilder) arg;
-        sb.append("\"" + stringLitExpr.getValue() + "\"");
+        sb.append("\"\"\"\n" + stringLitExpr.getValue() + "\"\"\"");
         return sb;
     }
 
@@ -84,7 +100,7 @@ public class CodeGenVisitor implements ASTVisitor {
     public Object visitConsoleExpr(ConsoleExpr consoleExpr, Object arg) throws Exception {
         CodeGenStringBuilder sb = (CodeGenStringBuilder) arg;
         Types.Type type = consoleExpr.getCoerceTo();
-        sb.append(convertTypeToCast(consoleExpr.getCoerceTo()));
+        sb.append(convertTypeToBoxed(consoleExpr.getCoerceTo()));
         sb.append("ConsoleIO.readValueFromConsole(");
 
         String prompt = "\"Enter ";
@@ -123,6 +139,9 @@ public class CodeGenVisitor implements ASTVisitor {
             sb.lparen();
             sb.append(unaryExpression.getOp().getText());
             Expr expr = unaryExpression.getExpr();
+            if(unaryExpression.getCoerceTo() != null && unaryExpression.getCoerceTo() != unaryExpression.getType()) {
+                sb.append(convertTypeToCast(unaryExpression.getCoerceTo()));
+            }
             expr.visit(this, sb);
             sb.rparen();
             return sb;
@@ -135,11 +154,27 @@ public class CodeGenVisitor implements ASTVisitor {
         CodeGenStringBuilder sb = (CodeGenStringBuilder) arg;
         sb.lparen();
         Expr left =  binaryExpr.getLeft();
+        if(binaryExpr.getLeft().getType() == Types.Type.STRING && (binaryExpr.getOp().getKind() == IToken.Kind.NOT_EQUALS) && binaryExpr.getRight().getType() == Types.Type.STRING) {
+            sb.append("!");
+        }
+        if(binaryExpr.getCoerceTo() != null && binaryExpr.getCoerceTo() != binaryExpr.getType()) {
+            sb.append(convertTypeToCast(binaryExpr.getCoerceTo()));
+        }
         left.visit(this, sb);
-        sb.space();
-        sb.append(binaryExpr.getOp().getText()).space();
+        if(binaryExpr.getLeft().getType() == Types.Type.STRING && (binaryExpr.getOp().getKind() == IToken.Kind.EQUALS || binaryExpr.getOp().getKind() == IToken.Kind.NOT_EQUALS) && binaryExpr.getRight().getType() == Types.Type.STRING) {
+            sb.append(".equals(");
+        }
+        else {
+            sb.space().append(binaryExpr.getOp().getText()).space();
+        }
         Expr right = binaryExpr.getRight();
+        if(binaryExpr.getCoerceTo() != null && binaryExpr.getCoerceTo() != binaryExpr.getType()) {
+            sb.append(convertTypeToCast(binaryExpr.getCoerceTo()));
+        }
         right.visit(this, sb);
+        if(binaryExpr.getLeft().getType() == Types.Type.STRING && (binaryExpr.getOp().getKind() == IToken.Kind.EQUALS || binaryExpr.getOp().getKind() == IToken.Kind.NOT_EQUALS) && binaryExpr.getRight().getType() == Types.Type.STRING) {
+            sb.rparen();
+        }
         sb.rparen();
         return sb;
     }
@@ -158,16 +193,23 @@ public class CodeGenVisitor implements ASTVisitor {
     public Object visitConditionalExpr(ConditionalExpr conditionalExpr, Object arg) throws Exception {
         CodeGenStringBuilder sb = (CodeGenStringBuilder) arg;
         sb.lparen();
-
+        //sb.lparen();
         Expr condition = conditionalExpr.getCondition();
         condition.visit(this, sb);
-        sb.rparen();
+        //sb.rparen();
         sb.append(" ? ");
         Expr trueCase = conditionalExpr.getTrueCase();
+        if(conditionalExpr.getCoerceTo() != null && conditionalExpr.getCoerceTo() != conditionalExpr.getType()) {
+            sb.append(convertTypeToCast(conditionalExpr.getCoerceTo()));
+        }
         trueCase.visit(this, sb);
         sb.append(" : ");
         Expr falseCase = conditionalExpr.getFalseCase();
+        if(conditionalExpr.getCoerceTo() != null && conditionalExpr.getCoerceTo() != conditionalExpr.getType()) {
+            sb.append(convertTypeToCast(conditionalExpr.getCoerceTo()));
+        }
         falseCase.visit(this, sb);
+        sb.rparen();
         return sb;
     }
 
