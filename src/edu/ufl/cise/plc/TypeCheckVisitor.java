@@ -439,7 +439,8 @@ public class TypeCheckVisitor implements ASTVisitor {
 		if(declaration.getExpr() != null) {
 			Type initializerType = (Type) declaration.getExpr().visit(this, arg);
 			if (declaration.getType() == IMAGE) {
-				check(initializerType == IMAGE || declaration.getDim() != null, declaration, "type of expression and declared type do not match");
+				check(initializerType == IMAGE || declaration.getDim() != null || initializerType == STRING, declaration, "type of expression and declared type do not match");
+				declaration.getNameDef().setInitialized(true);
 			}
 			if(declaration.getOp().getKind() == Kind.ASSIGN) {
 				Pair<Boolean, Type> checkComp = assignStatementCompatible(declaration.getNameDef().getType(), declaration.getExpr().getType(), false);
