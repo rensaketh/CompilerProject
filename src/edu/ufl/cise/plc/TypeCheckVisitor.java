@@ -436,7 +436,7 @@ public class TypeCheckVisitor implements ASTVisitor {
 		boolean inserted = symbolTable.insert(name,declaration);
 		check(inserted, declaration, "variable " + name + " already declared");
 
-		if(declaration.getExpr() != null && declaration.getDim() == null) {
+		if(declaration.getExpr() != null) {
 			Type initializerType = (Type) declaration.getExpr().visit(this, arg);
 			if (declaration.getType() == IMAGE) {
 				check(initializerType == IMAGE || declaration.getDim() != null, declaration, "type of expression and declared type do not match");
@@ -460,7 +460,7 @@ public class TypeCheckVisitor implements ASTVisitor {
 			}
 			declaration.setInitialized(true);
 		}
-		else if(declaration.getDim() != null) {
+		if(declaration.getDim() != null) {
 			Type dimType = (Type) declaration.getDim().visit(this, arg);
 			check(dimType == INT, declaration.getDim(), "expected int for type of dimension");
 			//return null;
