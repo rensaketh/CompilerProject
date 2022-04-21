@@ -88,7 +88,7 @@ public class CodeGenVisitor implements ASTVisitor {
     @Override
     public Object visitIntLitExpr(IntLitExpr intLitExpr, Object arg) throws Exception {
         CodeGenStringBuilder sb = (CodeGenStringBuilder) arg;
-        if(intLitExpr.getCoerceTo() != null && intLitExpr.getCoerceTo() != Types.Type.INT) {
+        if(intLitExpr.getCoerceTo() != null && intLitExpr.getCoerceTo() != Types.Type.INT && intLitExpr.getCoerceTo() != Types.Type.COLOR) {
             sb.append(convertTypeToCast(intLitExpr.getCoerceTo()));
         }
         sb.append(Integer.toString(intLitExpr.getValue()));
@@ -153,20 +153,38 @@ public class CodeGenVisitor implements ASTVisitor {
     @Override
     public Object visitColorExpr(ColorExpr colorExpr, Object arg) throws Exception {
         CodeGenStringBuilder sb = (CodeGenStringBuilder) arg;
-        sb.append("new ColorTuple(");
+        boolean castToFloat = false;
+        if(colorExpr.getType() == Types.Type.COLORFLOAT) {
+            sb.append("new ColorTupleFloat(");
+        }
+        else {
+            sb.append("new ColorTuple(");
+        }
+        /*if(colorExpr.getRed().getType() == Types.Type.FLOAT) {
+            sb.append("(int) ");
+        }*/
         colorExpr.getRed().visit(this, arg);
         sb.comma().space();
+        /*if(colorExpr.getGreen().getType() == Types.Type.FLOAT) {
+            sb.append("(int) ");
+        }*/
         colorExpr.getGreen().visit(this, arg);
         sb.comma().space();
+        /*if(colorExpr.getBlue().getType() == Types.Type.FLOAT) {
+            sb.append("(int) ");
+        }*/
         colorExpr.getBlue().visit(this, arg);
         sb.rparen();
+        if(colorExpr.getType() == Types.Type.COLORFLOAT) {
+            sb.append(".pack()");
+        }
         return null;
     }
 
     @Override
     public Object visitUnaryExpr(UnaryExpr unaryExpression, Object arg) throws Exception {
+        CodeGenStringBuilder sb = (CodeGenStringBuilder) arg;
         if(unaryExpression.getOp().getKind() == IToken.Kind.BANG || unaryExpression.getOp().getKind() == IToken.Kind.MINUS) {
-            CodeGenStringBuilder sb = (CodeGenStringBuilder) arg;
             sb.lparen();
             sb.append(unaryExpression.getOp().getText());
             Expr expr = unaryExpression.getExpr();
@@ -175,44 +193,105 @@ public class CodeGenVisitor implements ASTVisitor {
             }
             expr.visit(this, sb);
             sb.rparen();
-            return sb;
         }
-        else if(unaryExpression.getOp().getKind() == IToken.Kind.COLOR_OP) {
-            if(unaryExpression.getExpr().getType() == Types.Type.INT || unaryExpression.getExpr().getCoerceTo() == Types.Type.INT) {
+        else if(unaryExpression.getExpr().getType() == Types.Type.COLOR || unaryExpression.getExpr().getType() == Types.Type.INT) {
+            sb.append("ColorTuple.");
+            sb.append(unaryExpression.getOp().getText()).lparen();
+            unaryExpression.getExpr().visit(this, arg);
+            sb.rparen();
+            /*if(unaryExpression.getExpr().getType() == Types.Type.INT || unaryExpression.getExpr().getCoerceTo() == Types.Type.INT) {
 
+            }*/
+        }
+        else if(unaryExpression.getExpr().getType() == Types.Type.IMAGE) {
+            sb.append("ImageOps.extract");
+            switch(unaryExpression.getOp().getText()) {
+                case "getRed":
+                    sb.append("Red");
+                    break;
+                case "getBlue":
+                    sb.append("Blue");
+                    break;
+                case "getGreen":
+                    sb.append("Green");
+                    break;
             }
+            sb.lparen();
+            unaryExpression.getExpr().visit(this, arg);
+            sb.rparen();
         }
-        else if(unaryExpression.getOp().getKind() == IToken.Kind.IMAGE_OP) {
-
-        }
-        throw new UnsupportedOperationException("Currently only supporting - and !");
+        return sb;
     }
 
     @Override
     public Object visitBinaryExpr(BinaryExpr binaryExpr, Object arg) throws Exception {
         CodeGenStringBuilder sb = (CodeGenStringBuilder) arg;
         sb.lparen();
-        Expr left =  binaryExpr.getLeft();
-        if(binaryExpr.getLeft().getType() == Types.Type.STRING && (binaryExpr.getOp().getKind() == IToken.Kind.NOT_EQUALS) && binaryExpr.getRight().getType() == Types.Type.STRING) {
-            sb.append("!");
+        Expr left = binaryExpr.getLeft();
+        Expr right = binaryExpr.getRight();
+        Types.Type leftType = (left.getCoerceTo() == null) ? left.getType() : left.getCoerceTo();
+        Types.Type rightType = (right.getCoerceTo() == null) ? right.getType() : right.getCoerceTo();
+        if((leftType == Types.Type.COLOR && rightType == Types.Type.COLOR) || (leftType == Types.Type.IMAGE && rightType == Types.Type.IMAGE)) {
+            if(leftType == Types.Type.COLOR && rightType == Types.Type.COLOR) {
+                sb.append("ImageOps.binaryTupleOp(ImageOps.");
+            }
+            else {
+                sb.append("ImageOps.binaryImageImageOp(ImageOps.");
+            }
+            if(binaryExpr.getOp().getKind() == IToken.Kind.EQUALS || binaryExpr.getOp().getKind() == IToken.Kind.NOT_EQUALS) {
+                sb.append("BoolOP.");
+            }
+            else {
+                sb.append("OP.");
+            }
+            sb.append(binaryExpr.getOp().getKind().name()).comma().space();
+            left.visit(this, sb);
+            sb.comma().space();
+            right.visit(this, sb);
+            sb.rparen();
         }
-        if(binaryExpr.getCoerceTo() != null && binaryExpr.getCoerceTo() != binaryExpr.getType()) {
-            sb.append(convertTypeToCast(binaryExpr.getCoerceTo()));
-        }
-        left.visit(this, sb);
-        if(binaryExpr.getLeft().getType() == Types.Type.STRING && (binaryExpr.getOp().getKind() == IToken.Kind.EQUALS || binaryExpr.getOp().getKind() == IToken.Kind.NOT_EQUALS) && binaryExpr.getRight().getType() == Types.Type.STRING) {
-            sb.append(".equals(");
+        else if((leftType == Types.Type.IMAGE && (rightType == Types.Type.COLOR || rightType == Types.Type.INT)) || ((leftType == Types.Type.COLOR || leftType == Types.Type.INT) && rightType == Types.Type.IMAGE)) {
+            sb.append("ImageOps.binaryImageScalarOp(ImageOps.");
+            if(binaryExpr.getOp().getKind() == IToken.Kind.EQUALS || binaryExpr.getOp().getKind() == IToken.Kind.NOT_EQUALS) {
+                sb.append("BoolOP.");
+            }
+            else {
+                sb.append("OP.");
+            }
+            Expr image = (leftType == Types.Type.IMAGE) ? left : right;
+            Expr colorOrInt = ((leftType == Types.Type.COLOR || leftType == Types.Type.INT)) ? left : right;
+            sb.append(binaryExpr.getOp().getKind().name()).comma().space();
+            image.visit(this, sb);
+            sb.comma().space();
+            if(colorOrInt.getType() == Types.Type.INT) {
+                colorOrInt.visit(this, arg);
+            }
+            else {
+                sb.append("ColorTuple.makePackedColor(");
+            }
+            sb.rparen();
         }
         else {
-            sb.space().append(binaryExpr.getOp().getText()).space();
-        }
-        Expr right = binaryExpr.getRight();
-        if(binaryExpr.getCoerceTo() != null && binaryExpr.getCoerceTo() != binaryExpr.getType()) {
-            sb.append(convertTypeToCast(binaryExpr.getCoerceTo()));
-        }
-        right.visit(this, sb);
-        if(binaryExpr.getLeft().getType() == Types.Type.STRING && (binaryExpr.getOp().getKind() == IToken.Kind.EQUALS || binaryExpr.getOp().getKind() == IToken.Kind.NOT_EQUALS) && binaryExpr.getRight().getType() == Types.Type.STRING) {
-            sb.rparen();
+            if (leftType == Types.Type.STRING && (binaryExpr.getOp().getKind() == IToken.Kind.NOT_EQUALS) && rightType == Types.Type.STRING) {
+                sb.append("!");
+            }
+            if (binaryExpr.getCoerceTo() != null && binaryExpr.getCoerceTo() != binaryExpr.getType()) {
+                sb.append(convertTypeToCast(binaryExpr.getCoerceTo()));
+            }
+            left.visit(this, sb);
+            if (leftType == Types.Type.STRING && (binaryExpr.getOp().getKind() == IToken.Kind.EQUALS || binaryExpr.getOp().getKind() == IToken.Kind.NOT_EQUALS) && rightType == Types.Type.STRING) {
+                sb.append(".equals(");
+            } else {
+                sb.space().append(binaryExpr.getOp().getText()).space();
+            }
+
+            if (binaryExpr.getCoerceTo() != null && binaryExpr.getCoerceTo() != binaryExpr.getType()) {
+                sb.append(convertTypeToCast(binaryExpr.getCoerceTo()));
+            }
+            right.visit(this, sb);
+            if (leftType == Types.Type.STRING && (binaryExpr.getOp().getKind() == IToken.Kind.EQUALS || binaryExpr.getOp().getKind() == IToken.Kind.NOT_EQUALS) && rightType == Types.Type.STRING) {
+                sb.rparen();
+            }
         }
         sb.rparen();
         return sb;
@@ -263,29 +342,26 @@ public class CodeGenVisitor implements ASTVisitor {
 
     @Override
     public Object visitPixelSelector(PixelSelector pixelSelector, Object arg) throws Exception {
+        StringBuilder[] sbArr;
+        pixelSelector.getX().visit(this, arg);
+        pixelSelector.getY().visit(this, arg);
         return null;
     }
 
     @Override
     public Object visitAssignmentStatement(AssignmentStatement assignmentStatement, Object arg) throws Exception {
         CodeGenStringBuilder sb = (CodeGenStringBuilder) arg;
-        if(assignmentStatement.getTargetDec().getType() == Types.Type.IMAGE) {
-            sb.append("for(int x = 0; x < ");
-            sb.append(assignmentStatement.getName() + ".getWidth(); x++) {\n\t\t\t");
-            sb.append("for(int y = 0; y < ");
-            sb.append(assignmentStatement.getName() + ".getHeight(); y++) {\n\t\t\t\t");
+        if(assignmentStatement.getTargetDec().getType() == Types.Type.IMAGE && assignmentStatement.getTargetDec().getDim() != null) {
+            String xVar = assignmentStatement.getSelector().getX().getText();
+            String yVar = assignmentStatement.getSelector().getY().getText();
+            sb.append("for(int " + xVar + " = 0; " + xVar + " < ");
+            sb.append(assignmentStatement.getName() + ".getWidth(); " + xVar + "++) {\n\t\t\t");
+            sb.append("for(int " + yVar + " = 0; " + yVar + " < ");
+            sb.append(assignmentStatement.getName() + ".getHeight(); " + yVar + "++) {\n\t\t\t\t");
             sb.append("ImageOps.setColor(");
             sb.append(assignmentStatement.getName()).comma().space();
-            sb.append("x, y, ");
+            sb.append(xVar + ", " + yVar + ", ");
             if(assignmentStatement.getExpr().getCoerceTo() == Types.Type.COLOR) {
-                //assignmentStatement.getSelector()().visit(this, arg);
-                /*sb.append("for(int x = 0; x < ");
-                sb.append(assignmentStatement.getName() + ".getWidth(); x++) {\n\t\t\t");
-                sb.append("for(int y = 0; y < ");
-                sb.append(assignmentStatement.getName() + ".getHeight(); y++) {\n\t\t\t\t");
-                sb.append("ImageOps.setColor(");
-                sb.append(assignmentStatement.getName()).comma().space();
-                sb.append("x, y, ");*/
                 Expr assign = assignmentStatement.getExpr();
                 assign.visit(this, sb);
                 sb.rparen().semi().newline();
@@ -320,11 +396,22 @@ public class CodeGenVisitor implements ASTVisitor {
                 writeStatement.getSource().visit(this, sb);
             }
             else if(writeStatement.getDest().getType() == Types.Type.STRING) {
-
+                sb.append("FileURLIO.writeImage").lparen();
+                writeStatement.getSource().visit(this, sb);
+                sb.comma().space();
+                writeStatement.getDest().visit(this, sb);
             }
         }
-        sb.append("ConsoleIO.console.println").lparen();
-        writeStatement.getSource().visit(this, sb);
+        else if(writeStatement.getDest().getType() == Types.Type.STRING) {
+            sb.append("FileURLIO.writeValue").lparen();
+            writeStatement.getSource().visit(this, sb);
+            sb.comma().space();
+            writeStatement.getDest().visit(this, sb);
+        }
+        else {
+            sb.append("ConsoleIO.console.println").lparen();
+            writeStatement.getSource().visit(this, sb);
+        }
         sb.rparen().semi().newline();
         return sb;
     }
@@ -351,6 +438,8 @@ public class CodeGenVisitor implements ASTVisitor {
                 readStatement.getSource().visit(this, sb);
                 sb.rparen();
             }
+            sb.semi().newline();
+            sb.append("FileURLIO.closeFiles()").semi().newline();
         }
         return sb;
         //throw new UnsupportedOperationException("Currently only reading from console");
@@ -364,6 +453,7 @@ public class CodeGenVisitor implements ASTVisitor {
         sb.append("import java.awt.image.BufferedImage").semi().newline();
         sb.append("import java.awt.*").semi().newline();
         sb.append("import edu.ufl.cise.plc.runtime.*").semi().newline();
+        //sb.append("import edu.ufl.cise.plc.runtime.ImageOps.*").semi().newline();
         sb.append("public class " + program.getName() + " {").newline();
         sb.append("\tpublic static " + convertTypeToString(program.getReturnType()) + " apply").lparen();
         //StringBuilder paramList = new StringBuilder();
@@ -425,7 +515,7 @@ public class CodeGenVisitor implements ASTVisitor {
         else if(declaration.getOp() != null && (declaration.getOp().getKind() == IToken.Kind.ASSIGN || declaration.getOp().getKind() == IToken.Kind.LARROW)) {
             sb.append(" = ");
             if(declaration.getType() == Types.Type.COLOR) {
-
+                declaration.getExpr().visit(this, arg);
             }
             else if(declaration.getType() == Types.Type.IMAGE && declaration.getOp().getKind() == IToken.Kind.LARROW) {
                 //declaration.
@@ -441,8 +531,39 @@ public class CodeGenVisitor implements ASTVisitor {
                 else {
                     sb.append("FileURLIO.readImage").lparen();
                     declaration.getExpr().visit(this, sb);
+                    sb.append(", null, null");
                     sb.rparen();
                 }
+            }
+
+            else if(declaration.getType() == Types.Type.IMAGE && declaration.getExpr().getType() == Types.Type.INT) {
+                sb.append("new BufferedImage").lparen();
+                declaration.getNameDef().getDim().visit(this, arg);
+                sb.comma().space();
+                sb.append("BufferedImage.TYPE_INT_RGB");
+                sb.rparen();
+                sb.semi().newline();
+                sb.tab().tab();
+                sb.append(declaration.getNameDef().getName());
+                sb.append(" = ");
+                sb.append("ImageOps.setAllPixels(");
+                sb.append(declaration.getNameDef().getName()).comma().space();
+                declaration.getExpr().visit(this, arg);
+                sb.rparen();
+            }
+
+            else if(declaration.getType() == Types.Type.IMAGE && (declaration.getExpr().getType() == Types.Type.COLOR || declaration.getExpr().getType() == Types.Type.COLORFLOAT)) {
+                sb.append("new BufferedImage").lparen();
+                declaration.getNameDef().getDim().visit(this, arg);
+                sb.comma().space();
+                sb.append("BufferedImage.TYPE_INT_RGB");
+                sb.rparen();
+                sb.semi().newline();
+                sb.tab().tab();
+                sb.append(declaration.getNameDef().getName());
+                sb.append(" = ");
+                sb.append("ImageOps.setColor(");
+                sb.append(declaration.getNameDef().getName()).comma().space();
             }
 
             else {
@@ -457,14 +578,19 @@ public class CodeGenVisitor implements ASTVisitor {
     @Override
     public Object visitUnaryExprPostfix(UnaryExprPostfix unaryExprPostfix, Object arg) throws Exception {
         CodeGenStringBuilder sb = (CodeGenStringBuilder) arg;
-        //sb.append("ColorTuple.unpack(");
+        /*sb.append("ColorTuple.unpack(");
         unaryExprPostfix.getExpr().visit(this, arg);
         sb.append(".getRGB").lparen();
         //unaryExprPostfix.getSelector().getX().visit(this, arg);
         sb.append("x, y").rparen();
         //unaryExprPostfix.g
         //image.ge
-        //unaryExprPostfix.
+        //unaryExprPostfix.*/
+        sb.append("ColorTuple.unpack(");
+        sb.append(unaryExprPostfix.getText());
+        sb.append(".getRGB").lparen();
+        sb.append(unaryExprPostfix.getSelector().getX().getText()).comma().space();
+        sb.append(unaryExprPostfix.getSelector().getY().getText()).rparen().rparen();
         return sb;
     }
 }

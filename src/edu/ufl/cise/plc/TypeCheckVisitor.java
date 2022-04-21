@@ -180,9 +180,11 @@ public class TypeCheckVisitor implements ASTVisitor {
 		if(op.equals(Kind.TIMES) || op.equals(Kind.DIV) || op.equals(Kind.MOD)) {
 			if(leftType == IMAGE && rightType == INT) {
 				resultType = IMAGE;
+				//binaryExpr.getRight().setCoerceTo(COLOR);
 			}
 			else if(leftType == IMAGE && rightType == FLOAT) {
 				resultType = IMAGE;
+				//binaryExpr.getRight().setCoerceTo(COLORFLOAT);
 			}
 			else if(leftType == INT && rightType == COLOR) {
 				binaryExpr.getLeft().setCoerceTo(COLOR);
@@ -442,7 +444,7 @@ public class TypeCheckVisitor implements ASTVisitor {
 				check(initializerType == IMAGE || declaration.getDim() != null || initializerType == STRING, declaration, "type of expression and declared type do not match");
 				declaration.getNameDef().setInitialized(true);
 			}
-			else if(declaration.getOp().getKind() == Kind.ASSIGN) {
+			if(declaration.getOp().getKind() == Kind.ASSIGN) {
 				Pair<Boolean, Type> checkComp = assignStatementCompatible(declaration.getNameDef().getType(), declaration.getExpr().getType(), false);
 				if(checkComp.t0 == true) {
 					declaration.getExpr().setCoerceTo(checkComp.t1);

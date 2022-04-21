@@ -281,14 +281,14 @@ public class ImageOps {
 //	}
 //	
 //	
-//	public static BufferedImage setAllPixels(BufferedImage image, int val) {
-//		ColorTuple c = new ColorTuple(val);
-//		for (int x = 0; x < image.getWidth(); x++)
-//			for (int y = 0; y < image.getHeight(); y++) {
-//				image.setRGB(x, y,  c.pack());
-//			}
-//		return image;
-//	}
+	public static BufferedImage setAllPixels(BufferedImage image, int val) {
+		ColorTuple c = new ColorTuple(val);
+		for (int x = 0; x < image.getWidth(); x++)
+			for (int y = 0; y < image.getHeight(); y++) {
+				image.setRGB(x, y,  c.pack());
+			}
+		return image;
+	}
 
 	
 //	/**
