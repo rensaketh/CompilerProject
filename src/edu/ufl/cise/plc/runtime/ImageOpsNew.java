@@ -286,7 +286,7 @@ public class ImageOpsNew {
         ColorTuple c = new ColorTuple(val);
         for (int x = 0; x < image.getWidth(); x++)
             for (int y = 0; y < image.getHeight(); y++) {
-                image.setRGB(x, y,  c.pack());
+                image.setRGB(x, y, c.pack());
             }
         return image;
     }
@@ -361,5 +361,19 @@ public class ImageOpsNew {
         int[] pixels1 = image1.getRGB(0,0,image1.getWidth(), image1.getHeight(), null,0,image1.getWidth());
         return Arrays.equals(pixels0, pixels1);
     }
+
+    /*public static BufferedImage binaryImageColorOp(ImageOps.OP op, BufferedImage left, ColorTuple right) {
+        int lwidth = left.getWidth();
+        int lheight = left.getHeight();
+        BufferedImage result = new BufferedImage(lwidth, lheight, BufferedImage.TYPE_INT_RGB);
+        for (int x = 0; x < lwidth; x++) {
+            for (int y = 0; y < lheight; y++) {
+                ColorTuple leftColor = ColorTuple.unpack(left.getRGB(x, y));
+                ColorTuple newColor = binaryTupleOp(op, leftColor, right);
+                result.setRGB(x, y, newColor.pack());
+            }
+        }
+        return result;
+    }*/
 
 }
